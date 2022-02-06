@@ -1,57 +1,142 @@
 #include <FastLED.h>
 
 #define LED_PIN     12
-#define NUM_LEDS    16*24
-#define BRIGHTNESS  255/4
+#define BRIGHTNESS  40
 #define LED_TYPE    WS2813
 #define COLOR_ORDER GRB
-CRGB leds[NUM_LEDS];
+#define SPEED       1
 
-#define UPDATES_PER_SECOND 100
+// Params for width and height
+const uint8_t kMatrixWidth  = 24;
+const uint8_t kMatrixHeight = 16;
 
-// This example shows several ways to set up and use 'palettes' of colors
-// with FastLED.
+// Param for different pixel layouts
+const bool    kMatrixSerpentineLayout = true;
+
+
+// This example combines two features of FastLED to produce a remarkable range of
+// effects from a relatively small amount of code.  This example combines FastLED's 
+// color palette lookup functions with FastLED's Perlin noise generator, and
+// the combination is extremely powerful.
 //
-// These compact palettes provide an easy way to re-colorize your
-// animation on the fly, quickly, easily, and with low overhead.
+// You might want to look at the "ColorPalette" and "Noise" examples separately
+// if this example code seems daunting.
 //
-// USING palettes is MUCH simpler in practice than in theory, so first just
-// run this sketch, and watch the pretty lights as you then read through
-// the code.  Although this sketch has eight (or more) different color schemes,
-// the entire sketch compiles down to about 6.5K on AVR.
+// 
+// The basic setup here is that for each frame, we generate a new array of 
+// 'noise' data, and then map it onto the LED matrix through a color palette.
 //
-// FastLED provides a few pre-configured color palettes, and makes it
-// extremely easy to make up your own color schemes with palettes.
+// Periodically, the color palette is changed, and new noise-generation parameters
+// are chosen at the same time.  In this example, specific noise-generation
+// values have been selected to match the given color palettes; some are faster, 
+// or slower, or larger, or smaller than others, but there's no reason these 
+// parameters can't be freely mixed-and-matched.
 //
-// Some notes on the more abstract 'theory and practice' of
-// FastLED compact palettes are at the bottom of this file.
+// In addition, this example includes some fast automatic 'data smoothing' at 
+// lower noise speeds to help produce smoother animations in those cases.
+//
+// The FastLED built-in color palettes (Forest, Clouds, Lava, Ocean, Party) are
+// used, as well as some 'hand-defined' ones, and some proceedurally generated
+// palettes.
+
+
+#define NUM_LEDS (kMatrixWidth * kMatrixHeight)
+#define MAX_DIMENSION ((kMatrixWidth>kMatrixHeight) ? kMatrixWidth : kMatrixHeight)
+
+// The leds
+CRGB leds[kMatrixWidth * kMatrixHeight];
+
+// The 16 bit version of our coordinates
+static uint16_t x;
+static uint16_t y;
+static uint16_t z;
+
+// We're using the x/y dimensions to map to the x/y pixels on the matrix.  We'll
+// use the z-axis for "time".  speed determines how fast time moves forward.  Try
+// 1 for a very slow moving effect, or 60 for something that ends up looking like
+// water.
+uint16_t speed = 20; // speed is set dynamically once we've started up
+
+// Scale determines how far apart the pixels in our noise matrix are.  Try
+// changing these values around to see how it affects the motion of the display.  The
+// higher the value of scale, the more "zoomed out" the noise iwll be.  A value
+// of 1 will be so zoomed in, you'll mostly see solid colors.
+uint16_t scale = 30; // scale is set dynamically once we've started up
+
+// This is the array that we keep our computed noise values in
+uint8_t noise[MAX_DIMENSION][MAX_DIMENSION];
+
+CRGBPalette16 currentPalette( PartyColors_p );
+uint8_t       colorLoop = 1;
 
 
 
-CRGBPalette16 currentPalette;
-TBlendType    currentBlending;
+// Fill the x/y array of 8-bit noise values using the inoise8 function.
+void fillnoise8() {
+  // If we're runing at a low "speed", some 8-bit artifacts become visible
+  // from frame-to-frame.  In order to reduce this, we can do some fast data-smoothing.
+  // The amount of data smoothing we're doing depends on "speed".
+  uint8_t dataSmoothing = 0;
+  if( speed < 50) {
+    dataSmoothing = 200 - (speed * 4);
+  }
+  
+  for(int i = 0; i < MAX_DIMENSION; i++) {
+    int ioffset = scale * i;
+    for(int j = 0; j < MAX_DIMENSION; j++) {
+      int joffset = scale * j;
+      
+      uint8_t data = inoise8(x + ioffset,y + joffset,z);
 
-extern CRGBPalette16 myRedWhiteBluePalette;
-extern const TProgmemPalette16 myRedWhiteBluePalette_p PROGMEM;
+      // The range of the inoise8 function is roughly 16-238.
+      // These two operations expand those values out to roughly 0..255
+      // You can comment them out if you want the raw noise data.
+      data = qsub8(data,16);
+      data = qadd8(data,scale8(data,39));
 
-
-void FillLEDsFromPaletteColors( uint8_t colorIndex)
-{
-    uint8_t brightness = 255;
-    
-    for( int i = 0; i < NUM_LEDS; ++i) {
-        leds[i] = ColorFromPalette( currentPalette, colorIndex, brightness, currentBlending);
-        colorIndex += 3;
+      if( dataSmoothing ) {
+        uint8_t olddata = noise[i][j];
+        uint8_t newdata = scale8( olddata, dataSmoothing) + scale8( data, 256 - dataSmoothing);
+        data = newdata;
+      }
+      
+      noise[i][j] = data;
     }
+  }
+  
+  z += speed;
+  
+  // apply slow drift to X and Y, just for visual variation.
+  x += speed / 8;
+  y -= speed / 16;
 }
 
+// There are several different palettes of colors demonstrated here.
+//
+// FastLED provides several 'preset' palettes: RainbowColors_p, RainbowStripeColors_p,
+// OceanColors_p, CloudColors_p, LavaColors_p, ForestColors_p, and PartyColors_p.
+//
+// Additionally, you can manually define your own color palettes, or you can write
+// code that creates color palettes on the fly.
 
-// This function fills the palette with totally random colors.
-void SetupTotallyRandomPalette()
+// 1 = 5 sec per palette
+// 2 = 10 sec per palette
+// etc
+#define HOLD_PALETTES_X_TIMES_AS_LONG 3
+
+
+// This function generates a random palette that's a gradient
+// between four different colors.  The first is a dim hue, the second is 
+// a bright hue, the third is a bright pastel, and the last is 
+// another bright hue.  This gives some visual bright/dark variation
+// which is more interesting than just a gradient of different hues.
+void SetupRandomPalette()
 {
-    for( int i = 0; i < 16; ++i) {
-        currentPalette[i] = CHSV( random8(), 255, random8());
-    }
+  currentPalette = CRGBPalette16( 
+                      CHSV( random8(), 255, 32), 
+                      CHSV( random8(), 255, 255), 
+                      CHSV( random8(), 128, 255), 
+                      CHSV( random8(), 255, 255)); 
 }
 
 // This function sets up a palette of black and white stripes,
@@ -60,132 +145,136 @@ void SetupTotallyRandomPalette()
 // to set them up.
 void SetupBlackAndWhiteStripedPalette()
 {
-    // 'black out' all 16 palette entries...
-    fill_solid( currentPalette, 16, CRGB::Black);
-    // and set every fourth one to white.
-    currentPalette[0] = CRGB::White;
-    currentPalette[4] = CRGB::White;
-    currentPalette[8] = CRGB::White;
-    currentPalette[12] = CRGB::White;
-    
+  // 'black out' all 16 palette entries...
+  fill_solid( currentPalette, 16, CRGB::Black);
+  // and set every fourth one to white.
+  currentPalette[0] = CRGB::White;
+  currentPalette[4] = CRGB::White;
+  currentPalette[8] = CRGB::White;
+  currentPalette[12] = CRGB::White;
+
 }
 
 // This function sets up a palette of purple and green stripes.
 void SetupPurpleAndGreenPalette()
 {
-    CRGB purple = CHSV( HUE_PURPLE, 255, 255);
-    CRGB green  = CHSV( HUE_GREEN, 255, 255);
-    CRGB black  = CRGB::Black;
-    
-    currentPalette = CRGBPalette16(
-                                   green,  green,  black,  black,
-                                   purple, purple, black,  black,
-                                   green,  green,  black,  black,
-                                   purple, purple, black,  black );
+  CRGB purple = CHSV( HUE_PURPLE, 255, 255);
+  CRGB green  = CHSV( HUE_GREEN, 255, 255);
+  CRGB black  = CRGB::Black;
+  
+  currentPalette = CRGBPalette16( 
+    green,  green,  black,  black,
+    purple, purple, black,  black,
+    green,  green,  black,  black,
+    purple, purple, black,  black );
 }
 
 
-// This example shows how to set up a static color palette
-// which is stored in PROGMEM (flash), which is almost always more
-// plentiful than RAM.  A static PROGMEM palette like this
-// takes up 64 bytes of flash.
-const TProgmemPalette16 myRedWhiteBluePalette_p PROGMEM =
+//
+// Mark's xy coordinate mapping code.  See the XYMatrix for more information on it.
+//
+uint16_t XY( uint8_t x, uint8_t y)
 {
-    CRGB::Red,
-    CRGB::Gray, // 'white' is too bright compared to red and blue
-    CRGB::Blue,
-    CRGB::Black,
-    
-    CRGB::Red,
-    CRGB::Gray,
-    CRGB::Blue,
-    CRGB::Black,
-    
-    CRGB::Red,
-    CRGB::Red,
-    CRGB::Gray,
-    CRGB::Gray,
-    CRGB::Blue,
-    CRGB::Blue,
-    CRGB::Black,
-    CRGB::Black
-};
-
-
-
-// Additional notes on FastLED compact palettes:
-//
-// Normally, in computer graphics, the palette (or "color lookup table")
-// has 256 entries, each containing a specific 24-bit RGB color.  You can then
-// index into the color palette using a simple 8-bit (one byte) value.
-// A 256-entry color palette takes up 768 bytes of RAM, which on Arduino
-// is quite possibly "too many" bytes.
-//
-// FastLED does offer traditional 256-element palettes, for setups that
-// can afford the 768-byte cost in RAM.
-//
-// However, FastLED also offers a compact alternative.  FastLED offers
-// palettes that store 16 distinct entries, but can be accessed AS IF
-// they actually have 256 entries; this is accomplished by interpolating
-// between the 16 explicit entries to create fifteen intermediate palette
-// entries between each pair.
-//
-// So for example, if you set the first two explicit entries of a compact 
-// palette to Green (0,255,0) and Blue (0,0,255), and then retrieved 
-// the first sixteen entries from the virtual palette (of 256), you'd get
-// Green, followed by a smooth gradient from green-to-blue, and then Blue.
-
-
-
-// There are several different palettes of colors demonstrated here.
-//
-// FastLED provides several 'preset' palettes: RainbowColors_p, RainbowStripeColors_p,
-// OceanColors_p, CloudColors_p, LavaColors_p, ForestColors_p, and PartyColors_p.
-//
-// Additionally, you can manually define your own color palettes, or you can write
-// code that creates color palettes on the fly.  All are shown here.
-
-void ChangePalettePeriodically()
-{
-    uint8_t secondHand = (millis() / 1000) % 60;
-    static uint8_t lastSecond = 99;
-    
-    if( lastSecond != secondHand) {
-        lastSecond = secondHand;
-        if( secondHand ==  0)  { currentPalette = RainbowColors_p;         currentBlending = LINEARBLEND; }
-        if( secondHand == 10)  { currentPalette = RainbowStripeColors_p;   currentBlending = NOBLEND;  }
-        if( secondHand == 15)  { currentPalette = RainbowStripeColors_p;   currentBlending = LINEARBLEND; }
-        if( secondHand == 20)  { SetupPurpleAndGreenPalette();             currentBlending = LINEARBLEND; }
-        if( secondHand == 25)  { SetupTotallyRandomPalette();              currentBlending = LINEARBLEND; }
-        if( secondHand == 30)  { SetupBlackAndWhiteStripedPalette();       currentBlending = NOBLEND; }
-        if( secondHand == 35)  { SetupBlackAndWhiteStripedPalette();       currentBlending = LINEARBLEND; }
-        if( secondHand == 40)  { currentPalette = CloudColors_p;           currentBlending = LINEARBLEND; }
-        if( secondHand == 45)  { currentPalette = PartyColors_p;           currentBlending = LINEARBLEND; }
-        if( secondHand == 50)  { currentPalette = myRedWhiteBluePalette_p; currentBlending = NOBLEND;  }
-        if( secondHand == 55)  { currentPalette = myRedWhiteBluePalette_p; currentBlending = LINEARBLEND; }
+  uint16_t i;
+  if( kMatrixSerpentineLayout == false) {
+    i = (y * kMatrixWidth) + x;
+  }
+  if( kMatrixSerpentineLayout == true) {
+    if( y & 0x01) {
+      // Odd rows run backwards
+      uint8_t reverseX = (kMatrixWidth - 1) - x;
+      i = (y * kMatrixWidth) + reverseX;
+    } else {
+      // Even rows run forwards
+      i = (y * kMatrixWidth) + x;
     }
+  }
+  return i;
+}
+
+
+void mapNoiseToLEDsUsingPalette()
+{
+  static uint8_t ihue=0;
+  
+  for(int i = 0; i < kMatrixWidth; i++) {
+    for(int j = 0; j < kMatrixHeight; j++) {
+      // We use the value at the (i,j) coordinate in the noise
+      // array for our brightness, and the flipped value from (j,i)
+      // for our pixel's index into the color palette.
+
+      uint8_t index = noise[j][i];
+      uint8_t bri =   noise[i][j];
+
+      // if this palette is a 'loop', add a slowly-changing base value
+      if( colorLoop) { 
+        index += ihue;
+      }
+
+      // brighten up, as the color palette itself often contains the 
+      // light/dark dynamic range desired
+      if( bri > 127 ) {
+        bri = 255;
+      } else {
+        bri = dim8_raw( bri * 2);
+      }
+
+      CRGB color = ColorFromPalette( currentPalette, index, bri);
+      leds[XY(i,j)] = color;
+    }
+  }
+  
+  ihue+=1;
+}
+
+
+void ChangePaletteAndSettingsPeriodically()
+{
+  uint8_t secondHand = ((millis() / 1000) / HOLD_PALETTES_X_TIMES_AS_LONG) % 60;
+  static uint8_t lastSecond = 99;
+  
+  if( lastSecond != secondHand) {
+    lastSecond = secondHand;
+    if( secondHand ==  0)  { currentPalette = RainbowColors_p;         speed = SPEED * 20; scale = 30; colorLoop = 1; }
+    if( secondHand ==  5)  { SetupPurpleAndGreenPalette();             speed = SPEED * 10; scale = 50; colorLoop = 1; }
+    if( secondHand == 10)  { SetupBlackAndWhiteStripedPalette();       speed = SPEED * 20; scale = 30; colorLoop = 1; }
+    if( secondHand == 15)  { currentPalette = ForestColors_p;          speed = SPEED *  8; scale =120; colorLoop = 0; }
+    if( secondHand == 20)  { currentPalette = CloudColors_p;           speed = SPEED *  4; scale = 30; colorLoop = 0; }
+    if( secondHand == 25)  { currentPalette = LavaColors_p;            speed = SPEED *  8; scale = 50; colorLoop = 0; }
+    if( secondHand == 30)  { currentPalette = OceanColors_p;           speed = SPEED * 20; scale = 90; colorLoop = 0; }
+    if( secondHand == 35)  { currentPalette = PartyColors_p;           speed = SPEED * 20; scale = 30; colorLoop = 1; }
+    if( secondHand == 40)  { SetupRandomPalette();                     speed = SPEED * 20; scale = 20; colorLoop = 1; }
+    if( secondHand == 45)  { SetupRandomPalette();                     speed = SPEED * 50; scale = 50; colorLoop = 1; }
+    if( secondHand == 50)  { SetupRandomPalette();                     speed = SPEED * 90; scale = 90; colorLoop = 1; }
+    if( secondHand == 55)  { currentPalette = RainbowStripeColors_p;   speed = SPEED * 30; scale = 20; colorLoop = 1; }
+  }
 }
 
 
 void setup() {
-    delay( 3000 ); // power-up safety delay
-    FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
-    FastLED.setBrightness(  BRIGHTNESS );
-    
-    currentPalette = RainbowColors_p;
-    currentBlending = LINEARBLEND;
+  delay(3000);
+  FastLED.addLeds<LED_TYPE,LED_PIN,COLOR_ORDER>(leds,NUM_LEDS);
+  FastLED.setBrightness(BRIGHTNESS);
+
+  // Initialize our coordinates to some random values
+  x = random16();
+  y = random16();
+  z = random16();
 }
 
 
-void loop()
-{
-    ChangePalettePeriodically();
-    
-    static uint8_t startIndex = 0;
-    startIndex = startIndex + 1; /* motion speed */
-    
-    FillLEDsFromPaletteColors( startIndex);
-    
-    FastLED.show();
-    FastLED.delay(1000 / UPDATES_PER_SECOND);
+void loop() {
+  // Periodically choose a new palette, speed, and scale
+  ChangePaletteAndSettingsPeriodically();
+
+  // generate noise data
+  fillnoise8();
+  
+  // convert the noise data to colors in the LED array
+  // using the current palette
+  mapNoiseToLEDsUsingPalette();
+
+  FastLED.show();
+  delay(10);
 }
+
