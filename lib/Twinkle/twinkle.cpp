@@ -1,13 +1,4 @@
-#include "FastLED.h"
-
-
-#define NUM_LEDS      100
-#define LED_TYPE   WS2813
-#define COLOR_ORDER   GRB
-#define DATA_PIN        12
-//#define CLK_PIN       4
-#define VOLTS          5
-#define MAX_MA       4000
+#include "twinkle.h"
 
 //  TwinkleFOX: Twinkling 'holiday' lights that fade in and out.
 //  Colors are chosen from a palette; a few palettes are provided.
@@ -69,41 +60,11 @@
 //
 //  -Mark Kriegsman, December 2015
 
-CRGBArray<NUM_LEDS> leds;
-
-// Overall twinkle speed.
-// 0 (VERY slow) to 8 (VERY fast).  
-// 4, 5, and 6 are recommended, default is 4.
-#define TWINKLE_SPEED 4
-
-// Overall twinkle density.
-// 0 (NONE lit) to 8 (ALL lit at once).  
-// Default is 5.
-#define TWINKLE_DENSITY 5
-
-// How often to change color palettes.
-#define SECONDS_PER_PALETTE  30
-// Also: toward the bottom of the file is an array 
-// called "ActivePaletteList" which controls which color
-// palettes are used; you can add or remove color palettes
-// from there freely.
-
 // Background color for 'unlit' pixels
 // Can be set to CRGB::Black if desired.
 CRGB gBackgroundColor = CRGB::Black; 
 // Example of dim incandescent fairy light background color
 // CRGB gBackgroundColor = CRGB(CRGB::FairyLight).nscale8_video(16);
-
-// If AUTO_SELECT_BACKGROUND_COLOR is set to 1,
-// then for any palette where the first two entries 
-// are the same, a dimmed version of that color will
-// automatically be used as the background color.
-#define AUTO_SELECT_BACKGROUND_COLOR 0
-
-// If COOL_LIKE_INCANDESCENT is set to 1, colors will 
-// fade out slighted 'reddened', similar to how
-// incandescent bulbs change color as they get dim down.
-#define COOL_LIKE_INCANDESCENT 1
 
 
 // A mostly red palette with green accents and white trim.
@@ -199,9 +160,6 @@ const TProgmemRGBPalette16* ActivePaletteList[] = {
   &Ice_p  
 };
 
-
-
-
 // Advance to the next color palette in the list (above).
 void chooseNextColorPalette( CRGBPalette16& pal)
 {
@@ -211,11 +169,6 @@ void chooseNextColorPalette( CRGBPalette16& pal)
 
   pal = *(ActivePaletteList[whichPalette]);
 }
-
-
-CRGBPalette16 gCurrentPalette;
-CRGBPalette16 gTargetPalette;
-
 
 
 // This function is like 'triwave8', which produces a 
@@ -261,7 +214,7 @@ void coolLikeIncandescent( CRGB& c, uint8_t phase)
 //  of one cycle of the brightness wave function.
 //  The 'high digits' are also used to determine whether this pixel
 //  should light at all during this cycle, based on the TWINKLE_DENSITY.
-CRGB computeOneTwinkle( uint32_t ms, uint8_t salt)
+CRGB computeOneTwinkle(const CRGBPalette16& pal, uint32_t ms, uint8_t salt)
 {
   uint16_t ticks = ms >> (8-TWINKLE_SPEED);
   uint8_t fastcycle8 = ticks;
@@ -278,7 +231,7 @@ CRGB computeOneTwinkle( uint32_t ms, uint8_t salt)
   uint8_t hue = slowcycle8 - salt;
   CRGB c;
   if( bright > 0) {
-    c = ColorFromPalette( gCurrentPalette, hue, bright, NOBLEND);
+    c = ColorFromPalette( pal, hue, bright, NOBLEND);
     if( COOL_LIKE_INCANDESCENT == 1 ) {
       coolLikeIncandescent( c, fastcycle8);
     }
@@ -294,7 +247,7 @@ CRGB computeOneTwinkle( uint32_t ms, uint8_t salt)
 //  "CalculateOneTwinkle" on each pixel.  It then displays
 //  either the twinkle color of the background color, 
 //  whichever is brighter.
-void drawTwinkles( CRGBSet& L)
+void drawTwinkles(const CRGBPalette16& pal,  CRGBSet& L)
 {
   // "PRNG16" is the pseudorandom number generator
   // It MUST be reset to the same starting value each time
@@ -310,8 +263,8 @@ void drawTwinkles( CRGBSet& L)
   // that color is used for the background color
   CRGB bg;
   if( (AUTO_SELECT_BACKGROUND_COLOR == 1) &&
-      (gCurrentPalette[0] == gCurrentPalette[1] )) {
-    bg = gCurrentPalette[0];
+      (pal[0] == pal[1] )) {
+    bg = pal[0];
     uint8_t bglight = bg.getAverageLight();
     if( bglight > 64) {
       bg.nscale8_video( 16); // very bright, so scale to 1/16th
@@ -338,7 +291,7 @@ void drawTwinkles( CRGBSet& L)
     // We now have the adjusted 'clock' for this pixel, now we call
     // the function that computes what color the pixel should be based
     // on the "brightness = f( time )" idea.
-    CRGB c = computeOneTwinkle( myclock30, myunique8);
+    CRGB c = computeOneTwinkle( pal, myclock30, myunique8);
 
     uint8_t cbright = c.getAverageLight();
     int16_t deltabright = cbright - backgroundBrightness;
@@ -358,29 +311,3 @@ void drawTwinkles( CRGBSet& L)
   }
 }
 
-
-
-void setup() {
-  delay( 3000 ); //safety startup delay
-  FastLED.setMaxPowerInVoltsAndMilliamps( VOLTS, MAX_MA);
-  FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS)
-    .setCorrection(TypicalLEDStrip);
-
-  chooseNextColorPalette(gTargetPalette);
-}
-
-
-void loop()
-{
-  EVERY_N_SECONDS( SECONDS_PER_PALETTE ) { 
-    chooseNextColorPalette( gTargetPalette ); 
-  }
-  
-  EVERY_N_MILLISECONDS( 10 ) {
-    nblendPaletteTowardPalette( gCurrentPalette, gTargetPalette, 12);
-  }
-
-  drawTwinkles( leds);
-  
-  FastLED.show();
-}
