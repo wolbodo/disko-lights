@@ -1,5 +1,5 @@
 #include <ESP32Encoder.h>
-#include "twinkle.h"
+#include "FastLED.h"
 #include "display.h"
 
 #include <WiFi.h>
@@ -13,14 +13,71 @@ const char* password = "darknetwork";
 #define ROTARY_1 12
 #define ROTARY_2 14
 
+#define GRID_WIDTH 4 * 6
+#define GRID_HEIGHT 4 * 4
+#define NUM_LEDS GRID_HEIGHT * GRID_WIDTH
+
+#define LED_TYPE   WS2813
+#define COLOR_ORDER   GRB
+#define DATA_PIN        13
+#define VOLTS          5
+#define MAX_MA       4000
+
 Display display = Display(17, 16, 4, 2, 21, 19, 18, 5, 22, 23);
 ESP32Encoder encoder;
 
-CRGBArray<NUM_LEDS> leds;
 
-CRGBPalette16 gCurrentPalette;
-CRGBPalette16 gTargetPalette;
+class Matrix {
+  private:
+    int width;
+    int height;
 
+  public:
+    CRGBArray<NUM_LEDS> leds;
+
+    Matrix(int width, int height) {
+      this->width = width;
+      this->height = height;
+    }
+
+    void draw() {
+      int time = millis();
+      for (int i = 0; i < NUM_LEDS; i++) {
+        bool on = (i + (time / 60)) % 100 < 50;
+        leds[i].setHSV((time / 10 + i/10) % 255, on ? 255 : sin8(time/100+i)/2, scale8(sin8(-time / 50 + i/5), 200) + 55);
+      }
+    };
+
+    void drawHorizontalLine(int y, CRGB color) {
+      for (int x = 0; x < GRID_WIDTH; x++) {
+        // tile
+        int tile_y = y / 4;
+        int tile_x = x / 4;
+
+        int tile;
+        int i;
+
+        if (tile_y % 2) { // odd
+          tile = tile_y + 3 - tile_x;
+        } else { // even
+          tile = tile_y * 4 + tile_x;
+        }
+        i = tile * 16;
+
+        int _x = x % 4;
+        int _y = y % 4;
+        if (_y % 2) {
+          i += _y * 4 + 3 - _x;
+        } else {
+          i += _y * 4 + _x;
+        }
+
+        this->leds[i] = &color;
+      }
+    };
+};
+
+Matrix matrix = Matrix(GRID_WIDTH, GRID_HEIGHT);
 
 void setup()
 {
@@ -87,33 +144,15 @@ void setup()
   encoder.setCount(40);
 
   FastLED.setMaxPowerInVoltsAndMilliamps( VOLTS, MAX_MA);
-  FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS)
+  FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(matrix.leds, NUM_LEDS)
     .setCorrection(TypicalLEDStrip);
 
-  chooseNextColorPalette(gTargetPalette);
 }
 
 int _encoderCount;
-void runTwinkles() {
+void loop() {
+  ArduinoOTA.handle();
 
-  EVERY_N_SECONDS( SECONDS_PER_PALETTE ) { 
-    chooseNextColorPalette( gTargetPalette ); 
-  }
-  
-  EVERY_N_MILLISECONDS( 10 ) {
-    nblendPaletteTowardPalette( gCurrentPalette, gTargetPalette, 12);
-  }
-
-  drawTwinkles( gCurrentPalette, leds);
-  
-  FastLED.show();
-
-}
-
-void loop()
-{
-    ArduinoOTA.handle();
-    
   int encoderCount = encoder.getCount() / 2;
   display.show(encoderCount % 100);
   // display.show(millis() / encoderCount % 100);
@@ -123,5 +162,17 @@ void loop()
   // }
   // _encoderCount = encoderCount;
 
-  runTwinkles();
+    // for (CRGB &pixel : leds)
+    // {
+    //   pixel.setHSV((time / 10) % 255, sin8(time / 33), sin8(time / 70));
+    // }
+
+  matrix.draw();
+
+  // matrix.drawHorizontalLine((millis() / 100) % GRID_HEIGHT, CRGB::Black);
+
+  matrix.drawHorizontalLine(7, CRGB::Black);
+
+
+  FastLED.show();
 }
