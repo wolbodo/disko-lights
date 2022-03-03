@@ -39,7 +39,15 @@ void Display::setup() {
   pinMode(drainB, OUTPUT);
 }
 
-void Display::show(char value) {
+  //  222
+  // 0   3
+  // 0   3
+  //  111
+  // 4   6
+  // 4   6
+  //  555 7
+
+void Display::showNumber(char value) {
   char digit;
   output(0);
 
@@ -54,14 +62,6 @@ void Display::show(char value) {
     digitalWrite(drainB, 0);
     digit = (value / 10) % 10;
   }
-
-  //  222
-  // 0   3
-  // 0   3
-  //  bbb
-  // 4   6
-  // 4   6
-  //  555 7
 
   switch (digit) {
     case 0:
@@ -97,6 +97,35 @@ void Display::show(char value) {
   }
 }
   
+void Display::showWait(char value) {
+  output(0);
+
+  if (state) {
+    state = false;
+    digitalWrite(drainA, 0);
+    digitalWrite(drainB, 1);
+  } else {
+    state = true;
+    digitalWrite(drainA, 1);
+    digitalWrite(drainB, 0);
+  }
+
+  switch(value % 10) {
+    case 0: output( state ? 1<<0 : 0); return;
+    case 1: output( state ? 1<<2 : 0); return;
+    case 2: output( state ? 1<<2 : 0); return;
+    case 3: output( !state ? 1<<2 : 0); return;
+    case 4: output( !state ? 1<<3 : 0); return;
+    case 5: output( !state ? 1<<6 : 0); return;
+    case 6: output( !state ? 1<<5 : 0); return;
+    case 8: output( state ? 1<<7: 0); return;
+    case 9: output( state ? 1<<5 : 0); return;
+    case 10: output( state ? 1<<4 : 0); return;
+    default: output(0); return;
+  }
+
+}
+
 void Display::output(char bits) {
   digitalWrite(pinA, bits & 1);
   digitalWrite(pinB, bits >> 1 & 1);
