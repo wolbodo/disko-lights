@@ -1,5 +1,6 @@
+#include <graphlib.h>
 
-struct Ledgrid {
+struct Ledgrid : public GraphicsPrimitives {
 
     enum {
         // 6 x 4 tiles
@@ -18,8 +19,8 @@ struct Ledgrid {
 
     int  nrleds() { return leds.size(); }
 
-    int  width() { return PANEL_WIDTH*(TILE_WIDTH+Vspace); }
-    int  height() { return PANEL_HEIGHT*(TILE_HEIGHT+Hspace); }
+    int16_t  width() override { return PANEL_WIDTH*(TILE_WIDTH+Vspace); }
+    int16_t  height() override { return PANEL_HEIGHT*(TILE_HEIGHT+Hspace); }
     // Convert x,y led coordinate to the lednr on the led-string
     int xy2i(int x, int y)
     {
@@ -51,7 +52,7 @@ struct Ledgrid {
         return tilenr*TILE_WIDTH*TILE_HEIGHT + lednr;
     }
 
-    void drawPixel(int x, int y, CRGB color)
+    void drawPixel(int16_t x, int16_t y, CRGB color) override
     {
         int i = xy2i(x, y);
         if (i>=0)
