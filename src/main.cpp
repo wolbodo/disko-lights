@@ -148,6 +148,18 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Booting");
 
+  display.setup();
+
+  pinMode(POWER_BUTTON_PIN, INPUT_PULLDOWN);
+
+  pinMode(POT_INPUT_PIN, INPUT);
+  pinMode(POT_LED_PIN, OUTPUT);
+
+  pinMode(ROTARY_PIN_BUTTON, INPUT_PULLDOWN);
+
+	ESP32Encoder::useInternalWeakPullResistors=UP;
+  encoder.attachFullQuad(ROTARY_PIN_A, ROTARY_PIN_B);
+
   WiFi.mode(WIFI_STA);
 
   wifiScan();
@@ -156,22 +168,15 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED) {
     Serial.println(WiFi.status());
     Serial.println("Connection Failed! Retrying...");
-    delay(1000);
+
+    for (int i=0; i < 50; i++) {
+      display.showWait(i/2);
+
+      delay(10);
+    }
+
     // ESP.restart();
   }
-
-  // Port defaults to 3232
-  // ArduinoOTA.setPort(3232);
-
-  // Hostname defaults to esp3232-[MAC]
-  // ArduinoOTA.setHostname("myesp32");
-
-  // No authentication by default
-  // ArduinoOTA.setPassword("admin");
-
-  // Password can be set with it's md5 value as well
-  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
 
   ArduinoOTA
     .onStart([]() {
@@ -204,18 +209,6 @@ void setup() {
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-
-  display.setup();
-
-  pinMode(POWER_BUTTON_PIN, INPUT_PULLDOWN);
-
-  pinMode(POT_INPUT_PIN, INPUT);
-  pinMode(POT_LED_PIN, OUTPUT);
-
-  pinMode(ROTARY_PIN_BUTTON, INPUT_PULLDOWN);
-
-	ESP32Encoder::useInternalWeakPullResistors=UP;
-  encoder.attachFullQuad(ROTARY_PIN_A, ROTARY_PIN_B);
 
   FastLED.setMaxPowerInVoltsAndMilliamps( VOLTS, MAX_MA);
   FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(matrix.leds, NUM_LEDS)
