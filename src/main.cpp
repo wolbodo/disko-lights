@@ -9,10 +9,12 @@
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include <ledgrid.h>
 
 const char* ssid = "Wolbodo";
 const char* password = "darknetwork";
 
+/*
 #define PANEL_WIDTH 4
 #define PANEL_HEIGHT 4
 #define TILE_WIDTH 6
@@ -21,7 +23,7 @@ const char* password = "darknetwork";
 #define GRID_HEIGHT PANEL_HEIGHT * TILE_HEIGHT
 #define TILE_HEIGHT 4
 #define NUM_LEDS TILE_HEIGHT * PANEL_HEIGHT * TILE_WIDTH * PANEL_WIDTH
-
+*/
 #define LED_TYPE   WS2813
 #define COLOR_ORDER   GRB
 #define DATA_PIN       GPIO_NUM_23
@@ -46,7 +48,7 @@ Display display = Display(SEGMENT_PINS);
 ESP32Encoder encoder;
 int programId = 0;
 
-
+/*
 class Matrix {
   private:
     int width;
@@ -86,13 +88,16 @@ class Matrix {
       this->leds[i] = color;
     };
 };
+*/
 
-Matrix matrix = Matrix(TILE_WIDTH, TILE_HEIGHT);
+//Matrix matrix = Matrix(TILE_WIDTH, TILE_HEIGHT);
+
+Ledgrid matrix;
 
 
-void drawRainbows1(Matrix matrix) {
+void drawRainbows1() {
   int time = millis();
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < matrix.leds.size() ; i++) {
     bool on = (i + (time / 60)) % 100 < 50;
     matrix.leds[i].setHSV(
       (time / 10 + i/10) % 255,
@@ -102,10 +107,10 @@ void drawRainbows1(Matrix matrix) {
   }
 };
 
-void drawRainbows2(Matrix matrix) {
+void drawRainbows2() {
   int time = millis();
-  for (int y = 0; y < TILE_HEIGHT * PANEL_HEIGHT; y++) {
-    for (int x=0; x < TILE_WIDTH * PANEL_WIDTH; x++) {
+  for (int y = 0; y < matrix.height() ; y++) {
+    for (int x=0; x < matrix.width() ; x++) {
       matrix.drawPixel(x, y, CHSV(x * 2 + time/20, 255, 255));
     }
   }
@@ -211,7 +216,7 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   FastLED.setMaxPowerInVoltsAndMilliamps( VOLTS, MAX_MA);
-  FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(matrix.leds, NUM_LEDS)
+  FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(matrix.leds, matrix.nrleds())
     .setCorrection(TypicalLEDStrip);
   setBrightness();
 
@@ -224,30 +229,30 @@ void runProgram() {
   int time = millis();
   switch (programId) {
     case 0:
-      drawRainbows2(matrix); break;
+      drawRainbows2(); break;
     case 1:
       count ++;
-      for (int i = 0; i < NUM_LEDS; i++) {
+      for (int i = 0; i < matrix.nrleds() ; i++) {
         matrix.leds[i] = CHSV(count, 255, ((count/8) % 2) * 255);
       }
       break;
 
     case 2:
       count ++;
-      for (int i = 0; i < NUM_LEDS; i++) {
+      for (int i = 0; i < matrix.nrleds() ; i++) {
         matrix.leds[i] = CHSV(count, 255, ((count/8) % 2) * 255);
       }
       break;
     case 3:
       count ++;
-      for (int i = 0; i < NUM_LEDS; i++) {
-        byte row = i / (GRID_WIDTH * PANEL_HEIGHT) + time / 50 % 2;
+      for (int i = 0; i < matrix.nrleds() ; i++) {
+        byte row = i / (matrix.width() * Ledgrid::PANEL_HEIGHT) + time / 50 % 2;
         matrix.leds[i] = CHSV(count, row, ((count/8) % 2) * 255);
       }
       break;
 
     default:
-      drawRainbows1(matrix);
+      drawRainbows1();
       break;
       
 
