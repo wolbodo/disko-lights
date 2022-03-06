@@ -11,15 +11,15 @@ struct Ledgrid {
         TILE_HEIGHT = 4,
 
         // spacing between the tiles.
-        Hspace = 1,
-        Vspace = 1,
+        Hspace = 3,
+        Vspace = 3,
     };
     CRGBArray<TILE_HEIGHT*TILE_WIDTH*PANEL_WIDTH*PANEL_HEIGHT> leds;
 
     int  nrleds() { return leds.size(); }
 
-    int  width() { return PANEL_WIDTH*(TILE_WIDTH+1); }
-    int  height() { return PANEL_HEIGHT*(TILE_HEIGHT+1); }
+    int  width() { return PANEL_WIDTH*(TILE_WIDTH+Vspace); }
+    int  height() { return PANEL_HEIGHT*(TILE_HEIGHT+Hspace); }
     // Convert x,y led coordinate to the lednr on the led-string
     int xy2i(int x, int y)
     {

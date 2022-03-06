@@ -41,56 +41,12 @@ const char* password = "darknetwork";
 
 #define POWER_BUTTON_PIN GPIO_NUM_4
 
-#define PROGRAM_COUNT 4
+#define PROGRAM_COUNT 3
 
 
 Display display = Display(SEGMENT_PINS);
 ESP32Encoder encoder;
 int programId = 0;
-
-/*
-class Matrix {
-  private:
-    int width;
-    int height;
-
-  public:
-    CRGBArray<NUM_LEDS> leds;
-
-    Matrix(int width, int height) {
-      this->width = width;
-      this->height = height;
-    }
-
-    void drawPixel(int x, int y, CRGB color) {
-      // locate tile
-      int PANEL_y = y / PANEL_HEIGHT;
-      int PANEL_x = (PANEL_y % 2)
-        ? x / PANEL_WIDTH
-        : TILE_WIDTH - PANEL_x - 1;
-
-      int tile;
-      int i;
-
-      tile = PANEL_y * TILE_WIDTH + PANEL_x;
-      i = tile * PANEL_HEIGHT * PANEL_WIDTH;
-
-      int _x = x % PANEL_WIDTH;
-      int _y = y % PANEL_HEIGHT;
-      if (_y % 2) {
-        i += _y*PANEL_WIDTH + PANEL_WIDTH - _x - 1;
-      }
-      else
-      {
-        i += _y*PANEL_WIDTH + _x;
-      }
-
-      this->leds[i] = color;
-    };
-};
-*/
-
-//Matrix matrix = Matrix(TILE_WIDTH, TILE_HEIGHT);
 
 Ledgrid matrix;
 
@@ -109,9 +65,24 @@ void drawRainbows1() {
 
 void drawRainbows2() {
   int time = millis();
-  for (int y = 0; y < matrix.height() ; y++) {
-    for (int x=0; x < matrix.width() ; x++) {
+  int x, y, i;
+  for (y = 0; y < matrix.height() ; y++) {
+    for (x=0; x < matrix.width() ; x++) {
       matrix.drawPixel(x, y, CHSV(x * 2 + time/20, 255, 255));
+    }
+  }
+
+  x = (millis() / 100 ) % matrix.width();
+  for (y=0; y < matrix.height(); y++) {
+    for (i=0; i<3; i++) {
+      matrix.drawPixel(x+i, y, CRGB::BlueViolet);
+    }
+  }
+
+  y = (millis() / 156) % matrix.height();
+  for (x=0; x < matrix.width(); x++) {
+    for (i=0; i<2; i++) {
+      matrix.drawPixel(x+i, y, CRGB::WhiteSmoke);
     }
   }
 }
@@ -220,6 +191,7 @@ void setup() {
     .setCorrection(TypicalLEDStrip);
   setBrightness();
 
+  programId = 0;
 
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_4, 1);
 }
@@ -238,11 +210,7 @@ void runProgram() {
       break;
 
     case 2:
-      count ++;
-      for (int i = 0; i < matrix.nrleds() ; i++) {
-        matrix.leds[i] = CHSV(count, 255, ((count/8) % 2) * 255);
-      }
-      break;
+      drawRainbows1(); break;
     case 3:
       count ++;
       for (int i = 0; i < matrix.nrleds() ; i++) {
@@ -261,7 +229,6 @@ void runProgram() {
     // matrix.drawHorizontalLine(7, CRGB::Black);
   }
   // matrix.drawHorizontalLine((millis() / 1000) % TILE_HEIGHT, CRGB::Black);
-  FastLED.show();
 }
 
 
@@ -276,10 +243,11 @@ void loop() {
     esp_deep_sleep_start();
   }
 
-  ArduinoOTA.handle();
 
-  programId = (encoder.getCount() / 2) % PROGRAM_COUNT;
   int encoderButton = digitalRead(ROTARY_PIN_BUTTON);
+  if (encoderButton) {
+    programId = (encoder.getCount() / 2) % PROGRAM_COUNT;
+  }
 
   if (millis() / 100 % 2) {
     setBrightness();
@@ -289,16 +257,9 @@ void loop() {
 
   digitalWrite(POT_LED_PIN, encoderButton);
 
-  // if (encoderCount != _encoderCount) {
-  //   Serial.println("Encoder = " + String((int32_t)encoderCount));
-  // }
-  // _encoderCount = encoderCount;
+  // runProgram();
+  drawRainbows2();
+  FastLED.show();
+  ArduinoOTA.handle();
 
-    // for (CRGB &pixel : leds)
-    // {
-    //   pixel.setHSV((time / 10) % 255, sin8(time / 33), sin8(time / 70));
-    // }
-
-
-  runProgram();
 }
