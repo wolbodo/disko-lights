@@ -1,6 +1,7 @@
 #include <graphlib.h>
 
 struct Ledgrid : public GraphicsPrimitives {
+    uint16_t _brightness;
 
     enum {
         // 6 x 4 tiles
@@ -21,6 +22,11 @@ struct Ledgrid : public GraphicsPrimitives {
 
     int16_t  width() override { return PANEL_WIDTH*(TILE_WIDTH+Vspace); }
     int16_t  height() override { return PANEL_HEIGHT*(TILE_HEIGHT+Hspace); }
+
+    void setbrightness(uint16_t value)
+    {
+        _brightness = value;
+    }
     // Convert x,y led coordinate to the lednr on the led-string
     int xy2i(int x, int y)
     {
@@ -56,7 +62,16 @@ struct Ledgrid : public GraphicsPrimitives {
     {
         int i = xy2i(x, y);
         if (i>=0)
-            leds[i] = color;
+            leds[i] = adjustbrightness(color);
+    }
+
+    CRGB adjustbrightness(CRGB color)
+    {
+        return CRGB(adjustchannel(color.r), adjustchannel(color.g), adjustchannel(color.b));
+    }
+    uint8_t adjustchannel(uint8_t level)
+    {
+        return int(level*_brightness)/1024;
     }
 
     // should turn on all pixels in a single tile
