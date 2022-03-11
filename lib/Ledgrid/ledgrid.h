@@ -69,6 +69,7 @@ struct Ledgrid : public GraphicsPrimitives {
         for (int dy = 0 ; dy<TILE_HEIGHT ; dy++)
             drawPixel(x*(TILE_WIDTH+Hspace)+dx, y*(TILE_HEIGHT+Vspace)+dy, color);
     }
+
     // should turn on one pixel on all tiles
     // x = 0 .. TILE_WIDTH-1
     // y = 0 .. TILE_HEIGHT-1
@@ -78,4 +79,13 @@ struct Ledgrid : public GraphicsPrimitives {
         for (int dy = 0 ; dy<PANEL_HEIGHT ; dy++)
             drawPixel(x+dx*(TILE_WIDTH+Hspace), y+dy*(TILE_HEIGHT+Vspace), color);
     }
+
+    // fill entire panel with the same color
+    void fill(CRGB color)
+    {
+        for (int y = 0 ; y<height() ; y++)
+        for (int x = 0 ; x<width() ; x++)
+            drawPixel(x, y, color);
+    }
 };
+
