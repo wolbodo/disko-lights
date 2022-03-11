@@ -58,4 +58,23 @@ struct Ledgrid : public GraphicsPrimitives {
         if (i>=0)
             leds[i] = color;
     }
+
+    // should turn on all pixels in a single tile
+    // x = 0 .. PANEL_WIDTH-1
+    // y = 0 .. PANEL_HEIGHT-1
+    void paintTile(int x, int y, CRGB color)
+    {
+        for (int dx = 0 ; dx<TILE_WIDTH ; dx++)
+        for (int dy = 0 ; dy<TILE_HEIGHT ; dy++)
+            drawPixel(x*(TILE_WIDTH+Hspace)+dx, y*(TILE_HEIGHT+Vspace)+dy, color);
+    }
+    // should turn on one pixel on all tiles
+    // x = 0 .. TILE_WIDTH-1
+    // y = 0 .. TILE_HEIGHT-1
+    void tilePixel(int x, int y, CRGB color)
+    {
+        for (int dx = 0 ; dx<PANEL_WIDTH ; dx++)
+        for (int dy = 0 ; dy<PANEL_HEIGHT ; dy++)
+            drawPixel(x+dx*(TILE_WIDTH+Hspace), y+dy*(TILE_HEIGHT+Vspace), color);
+    }
 };
