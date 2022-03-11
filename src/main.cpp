@@ -263,10 +263,14 @@ void runProgram() {
 
 int _encoderCount;
 void loop() {
-  int powerbutton = digitalRead(POWER_BUTTON_PIN);
+  // Control the brightness of the grid.
   int brightness = analogRead(POT_INPUT_PIN);
-  matrix.setbrightness(brightness);
+  if (millis() / 100 % 2) {
+    setBrightness();
+  }
 
+  // The powerbutton triggers the deep sleep, being woken up by interrupts
+  int powerbutton = digitalRead(POWER_BUTTON_PIN);
   if (!powerbutton) {
     FastLED.clear(true);
 
@@ -275,15 +279,12 @@ void loop() {
 
 
 //  int encoderButton = digitalRead(ROTARY_PIN_BUTTON);
+//  digitalWrite(POT_LED_PIN, encoderButton);
   programId = (encoder.getCount() / 2) % PROGRAM_COUNT;
 
-  if (millis() / 100 % 2) {
-    setBrightness();
-  }
 
   display.showNumber(programId);
 
-//  digitalWrite(POT_LED_PIN, encoderButton);
 
   runProgram();
   //drawRainbows2();
