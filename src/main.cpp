@@ -41,7 +41,7 @@ const char* password = "darknetwork";
 
 #define POWER_BUTTON_PIN GPIO_NUM_4
 
-#define PROGRAM_COUNT 3
+#define PROGRAM_COUNT 5
 
 
 Display display = Display(SEGMENT_PINS);
@@ -196,10 +196,34 @@ void setup() {
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_4, 1);
 }
 
+void PixelSweep()
+{
+    for (int y=0 ; y<Ledgrid::PANEL_HEIGHT ; y++ )
+    for (int x=0 ; x<Ledgrid::PANEL_WIDTH ; x++)
+    {
+        matrix.paintTile(x, y, CRGB(31*(x+1), 31*(y+1), 31*(x+y+1)));
+        FastLED.show();
+        delay(200);
+        matrix.paintTile(x, y, CRGB(0, 0, 0));
+        FastLED.show();
+    }
+
+    for (int y=0 ; y<Ledgrid::TILE_HEIGHT; y++)
+    for (int x=0 ; x<Ledgrid::TILE_WIDTH ; x++)
+    {
+        matrix.tilePixel(x, y, CRGB(31*(x+1), 31*(y+1), 31*(x+y+1)));
+        FastLED.show();
+        delay(200);
+        matrix.tilePixel(x, y, CRGB(0, 0, 0));
+        FastLED.show();
+    }
+}
+
 byte count = 0;
 void runProgram() {
   int time = millis();
   switch (programId) {
+
     case 0:
       drawRainbows2(); break;
     case 1:
@@ -210,7 +234,8 @@ void runProgram() {
       break;
 
     case 2:
-      drawRainbows1(); break;
+      drawRainbows1();
+      break;
     case 3:
       count ++;
       for (int i = 0; i < matrix.nrleds() ; i++) {
@@ -218,9 +243,13 @@ void runProgram() {
         matrix.leds[i] = CHSV(count, row, ((count/8) % 2) * 255);
       }
       break;
+    case 4:
+      PixelSweep();
+      break;
 
     default:
-      drawRainbows1();
+      PixelSweep();
+      //drawRainbows1();
       break;
       
 
@@ -244,10 +273,8 @@ void loop() {
   }
 
 
-  int encoderButton = digitalRead(ROTARY_PIN_BUTTON);
-  if (encoderButton) {
-    programId = (encoder.getCount() / 2) % PROGRAM_COUNT;
-  }
+//  int encoderButton = digitalRead(ROTARY_PIN_BUTTON);
+  programId = (encoder.getCount() / 2) % PROGRAM_COUNT;
 
   if (millis() / 100 % 2) {
     setBrightness();
@@ -255,10 +282,10 @@ void loop() {
 
   display.showNumber(programId);
 
-  digitalWrite(POT_LED_PIN, encoderButton);
+//  digitalWrite(POT_LED_PIN, encoderButton);
 
-  // runProgram();
-  drawRainbows2();
+  runProgram();
+  //drawRainbows2();
   FastLED.show();
   ArduinoOTA.handle();
 
