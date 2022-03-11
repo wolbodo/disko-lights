@@ -1,4 +1,5 @@
 #pragma once
+
 class PixelSweep : public Program {
     enum { PANEL_SWEEP, PIXEL_SWEEP };
     int sweepstate = PANEL_SWEEP;
@@ -6,9 +7,14 @@ class PixelSweep : public Program {
     int pixelstate = TURN_ON;
     int x = 0;
     int y = 0;
+
+    EventTimer _t = 100;
 public:
     void tick(Ledgrid&matrix)
     {
+        if (!_t.ready())
+            return;
+
         switch (sweepstate) {
         case PANEL_SWEEP:
             if (!panel_step(matrix)) {
@@ -33,13 +39,16 @@ public:
         switch (pixelstate) {
         case TURN_ON:
             matrix.paintTile(x, y, CRGB(31*(x+1), 31*(y+1), 31*(x+y+1)));
+            _t.next(100);
             pixelstate = TURN_OFF;
             return true;
         case TURN_OFF:
             matrix.paintTile(x, y, CRGB(0, 0, 0));
             pixelstate = TURN_ON;
+            _t.next(1);
             return next_panel();
         }
+        return false;
     }
     bool next_panel()
     {
@@ -59,12 +68,15 @@ public:
         case TURN_ON:
             matrix.tilePixel(x, y, CRGB(31*(x+1), 31*(y+1), 31*(x+y+1)));
             pixelstate = TURN_OFF;
+            _t.next(100);
             return true;
         case TURN_OFF:
             matrix.tilePixel(x, y, CRGB(0, 0, 0));
             pixelstate = TURN_ON;
+            _t.next(1);
             return next_panel();
         }
+        return false;
     }
     bool next_pixel()
     {
