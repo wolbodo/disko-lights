@@ -11,6 +11,9 @@
 #include <ArduinoOTA.h>
 #include <ledgrid.h>
 #include "program.h"
+
+#include <eventtimer.h>
+
 #include "colorsweep.h"
 #include "gradient.h"
 #include "pixelsweep.h"
@@ -170,13 +173,12 @@ void setup() {
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_4, 1);
 }
 
-
+EventTimer t_brightness(100);
 
 void loop() {
   // Control the brightness of the grid.
-  if (millis() / 100 % 2) {
+  if (t_brightness.ready())
     updateBrightness();
-  }
 
   // The powerbutton triggers the deep sleep, being woken up by interrupts
   int powerbutton = digitalRead(POWER_BUTTON_PIN);
