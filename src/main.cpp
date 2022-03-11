@@ -264,7 +264,8 @@ void runProgram() {
 int _encoderCount;
 void loop() {
   int powerbutton = digitalRead(POWER_BUTTON_PIN);
-
+  int brightness = analogRead(POT_INPUT_PIN);
+  matrix.setbrightness(brightness);
 
   if (!powerbutton) {
     FastLED.clear(true);
