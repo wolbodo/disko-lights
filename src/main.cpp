@@ -19,6 +19,7 @@
 #include "pixelsweep.h"
 #include "rainbow1.h"
 #include "rainbow2.h"
+#include "spots.h"
 
 const char* ssid = "Wolbodo";
 const char* password = "darknetwork";
@@ -62,6 +63,7 @@ Program *programs[] = {
     new PixelSweep(),
     new ColorSweep(),
     new ColorGradient(),
+    new Spots(),
 };
 enum { PROGRAM_COUNT = sizeof(programs)/sizeof(programs[0]) };
 
@@ -173,7 +175,7 @@ void setup() {
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_4, 1);
 }
 
-EventTimer t_brightness(100);
+EventTimer t_brightness(50);
 
 void loop() {
   // Control the brightness of the grid.
