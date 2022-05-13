@@ -1,7 +1,7 @@
 
 #include "FastLED.h"
 
-#define PIXEL_COUNT 50
+#define PIXEL_COUNT 220
 #pragma once
 
 struct pixel {
@@ -19,7 +19,7 @@ public:
     void tick(Ledgrid&matrix) {
         int i;
         int hue = millis()/200;
-        CRGB background = CHSV(hue + sin8(millis()/50), 200, 205);
+        CRGB background = CHSV(hue + sin8(millis()/50), 200, 100);
     
         for (i=0; i<matrix.width(); i++) {
             matrix.drawFastVLine(i, 0, matrix.height(), CRGB(background).fadeToBlackBy(sin8(millis()/300 + i*40)));
@@ -30,15 +30,15 @@ public:
             if (i == change_pixel && random8() < 25) {
                 pixels[i].x = random16() % matrix.width();
                 pixels[i].y = random16() % matrix.height();
-                pixels[i].initial = pixels[i].color = CHSV(hue, 255, 255);
+                pixels[i].color = CHSV(hue, 255, 255);
                 pixels[i].speed = random(4, 40);
                 change_pixel = (change_pixel + 1) % PIXEL_COUNT;
             } else {
                 if ( pixels[i].color.getLuma() == 0) {
                 // pixels[i].color = CHSV(hue + 10, 170, 180);
-                pixels[i].color = pixels[i].initial;
+                    pixels[i].color = CHSV(hue, 255, 255);
                 } else {
-                pixels[i].color = pixels[i].color.fadeToBlackBy(pixels[i].speed);
+                    pixels[i].color = pixels[i].color.fadeToBlackBy(pixels[i].speed);
                 }
             }
             }

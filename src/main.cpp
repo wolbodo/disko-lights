@@ -1,3 +1,4 @@
+#include <ESPAsyncE131.h>
 #include <ESP32Encoder.h>
 
 #include "SPI.h"
@@ -51,11 +52,16 @@ const char* password = "darknetwork";
 
 #define POWER_BUTTON_PIN GPIO_NUM_4
 
+#define UNIVERSE 10                      // First DMX Universe to listen for
+#define UNIVERSE_COUNT 2                // Total number of Universes to listen for, starting at UNIVERSE
 
 Display display = Display(SEGMENT_PINS);
 ESP32Encoder encoder;
 
 Ledgrid matrix;
+
+// ESPAsyncE131 instance with UNIVERSE_COUNT buffer slots
+ESPAsyncE131 e131(UNIVERSE_COUNT);
 
 Program *programs[] = {
     new DrawRainbows2(),
@@ -66,7 +72,6 @@ Program *programs[] = {
     new Spots(),
 };
 enum { PROGRAM_COUNT = sizeof(programs)/sizeof(programs[0]) };
-
 
 void updateBrightness() {
   int pot_value = ((float) analogRead(POT_INPUT_PIN)) / 16.062745098039215;
@@ -97,7 +102,6 @@ void wifiScan() {
     }
   }
   Serial.println("");
-
 }
 
 void setup() {
@@ -131,9 +135,16 @@ void setup() {
 
       delay(10);
     }
-
-    // ESP.restart();
   }
+  
+  // Choose one to begin listening for E1.31 data
+  //if (e131.begin(E131_UNICAST))                               // Listen via Unicast
+  if (e131.begin(E131_MULTICAST, UNIVERSE, UNIVERSE_COUNT))   // Listen via Multicast
+      Serial.println(F("Listening for data..."));
+  else 
+      Serial.println(F("*** e131.begin failed ***"));
+
+  // ESP.restart();
 
   ArduinoOTA
     .onStart([]() {
@@ -190,10 +201,22 @@ void loop() {
     esp_deep_sleep_start();
   }
 
-
 //  int encoderButton = digitalRead(ROTARY_PIN_BUTTON);
 //  digitalWrite(POT_LED_PIN, encoderButton);
   int programId = (encoder.getCount() / 2) % PROGRAM_COUNT;
+  // int programId = 0;
+
+  if (!e131.isEmpty()) {
+      e131_packet_t packet;
+      e131.pull(&packet);     // Pull packet from ring buffer
+      
+      Serial.printf("Universe %u / %u Channels | Packet#: %u / Errors: %u / CH1: %u\n",
+              htons(packet.universe),                 // The Universe for this packet
+              htons(packet.property_value_count) - 1, // Start code is ignored, we're interested in dimmer data
+              e131.stats.num_packets,                 // Packet counter
+              e131.stats.packet_errors,               // Packet error counter
+              packet.property_values[1]);             // Dimmer data for Channel 1
+  }
 
   display.showNumber(programId);
 
