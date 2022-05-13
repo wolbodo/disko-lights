@@ -1,6 +1,6 @@
 #include <ESP32Encoder.h>
 
- #include "SPI.h"
+#include "SPI.h"
 #define FASTLED_ALL_PINS_HARDWARE_SPI
 #include "FastLED.h"
 #include "display.h"
