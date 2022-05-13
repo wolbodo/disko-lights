@@ -1,7 +1,7 @@
 
 #include "FastLED.h"
 
-#define PIXEL_COUNT 50
+#define PIXEL_COUNT 100
 #pragma once
 
 struct pixel {

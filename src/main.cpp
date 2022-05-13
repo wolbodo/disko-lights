@@ -58,12 +58,12 @@ ESP32Encoder encoder;
 Ledgrid matrix;
 
 Program *programs[] = {
+    new Spots(),
     new DrawRainbows2(),
     new DrawRainbows1(),
     new PixelSweep(),
     new ColorSweep(),
     new ColorGradient(),
-    new Spots(),
 };
 enum { PROGRAM_COUNT = sizeof(programs)/sizeof(programs[0]) };
 
