@@ -1,3 +1,6 @@
+#pragma once
+#include "FastLED.h"
+
 /*
 .pio/libdeps/esp32dev/SmartMatrix/src/Layer_Background_Impl.h
 .pio/libdeps/esp32dev/SmartMatrix/src/Layer_BackgroundGfx_Impl.h

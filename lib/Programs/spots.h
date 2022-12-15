@@ -1,8 +1,10 @@
+#pragma once
 
+#include "program.h"
+#include "ledgrid.h"
 #include "FastLED.h"
 
 #define PIXEL_COUNT 220
-#pragma once
 
 struct pixel {
   char x;

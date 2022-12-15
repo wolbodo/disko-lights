@@ -1,3 +1,5 @@
+#pragma once
+
 #include "FastLED.h"
 
 #define NUM_LEDS      16 * 24

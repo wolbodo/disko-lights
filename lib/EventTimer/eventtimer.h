@@ -1,7 +1,8 @@
-/*
+#pragma once
 
-usage:
-  - initialize with the desired interval time in millis.
+/*
+    usage:
+    - initialize with the desired interval time in millis.
 
   EventTimer t(100);
 

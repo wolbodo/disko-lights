@@ -1,4 +1,8 @@
 #pragma once
+
+#include "program.h"
+#include "ledgrid.h"
+
 class DrawRainbows1  : public Program { 
 public:
     void tick(Ledgrid&matrix)

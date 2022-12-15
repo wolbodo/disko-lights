@@ -1,41 +1,18 @@
-#include <ESPAsyncE131.h>
 #include <ESP32Encoder.h>
+#include "display.h"
+
+#include <WiFiManager.h>  
+#include <ArduinoOTA.h>
+
+#include <ESPAsyncE131.h>
 
 #include "SPI.h"
 #define FASTLED_ALL_PINS_HARDWARE_SPI
-#include "FastLED.h"
-#include "display.h"
+#include "allprograms.h"
 
-#include <WiFi.h>
-#include <ESPmDNS.h>
-#include <WiFiUdp.h>
-#include <ArduinoOTA.h>
-#include <ledgrid.h>
-#include "program.h"
+const char* ssid = "DiskoController";
 
-#include <eventtimer.h>
-
-#include "colorsweep.h"
-#include "gradient.h"
-#include "pixelsweep.h"
-#include "rainbow1.h"
-#include "rainbow2.h"
-#include "spots.h"
-
-const char* ssid = "Wolbodo";
-const char* password = "darknetwork";
-
-/*
-#define PANEL_WIDTH 4
-#define PANEL_HEIGHT 4
-#define TILE_WIDTH 6
-#define TILE_HEIGHT 4
-#define GRID_WIDTH PANEL_WIDTH * TILE_WIDTH
-#define GRID_HEIGHT PANEL_HEIGHT * TILE_HEIGHT
-#define TILE_HEIGHT 4
-#define NUM_LEDS TILE_HEIGHT * PANEL_HEIGHT * TILE_WIDTH * PANEL_WIDTH
-*/
-#define LED_TYPE   WS2813
+#define LED_TYPE   WS2812
 #define COLOR_ORDER   GRB
 #define DATA_PIN       GPIO_NUM_23
 #define VOLTS          5
@@ -52,8 +29,11 @@ const char* password = "darknetwork";
 
 #define POWER_BUTTON_PIN GPIO_NUM_4
 
-#define UNIVERSE 10                      // First DMX Universe to listen for
-#define UNIVERSE_COUNT 2                // Total number of Universes to listen for, starting at UNIVERSE
+#define UNIVERSE 10
+#define UNIVERSE_COUNT 10                // Total number of Universes to listen for, starting at UNIVERSE
+
+WiFiManager wifiManager;
+DNSServer dns;
 
 Display display = Display(SEGMENT_PINS);
 ESP32Encoder encoder;
@@ -64,6 +44,8 @@ Ledgrid matrix;
 ESPAsyncE131 e131(UNIVERSE_COUNT);
 
 Program *programs[] = {
+    new Christmas(),
+    new Spiral(),
     new Spots(),
     new DrawRainbows2(),
     new DrawRainbows1(),
@@ -78,34 +60,7 @@ void updateBrightness() {
   FastLED.setBrightness(pot_value);
 }
 
-void wifiScan() {
-  Serial.println("scan start");
-
-  // WiFi.scanNetworks will return the number of networks found
-  int n = WiFi.scanNetworks();
-  Serial.println("scan done");
-  if (n == 0) {
-      Serial.println("no networks found");
-  } else {
-    Serial.print(n);
-    Serial.println(" networks found");
-    for (int i = 0; i < n; ++i) {
-      // Print SSID and RSSI for each network found
-      Serial.print(i + 1);
-      Serial.print(": ");
-      Serial.print(WiFi.SSID(i));
-      Serial.print(" (");
-      Serial.print(WiFi.RSSI(i));
-      Serial.print(")");
-      Serial.println((WiFi.encryptionType(i) == WIFI_AUTH_OPEN)?" ":"*");
-      delay(10);
-    }
-  }
-  Serial.println("");
-}
-
 void setup() {
-
   Serial.begin(115200);
   Serial.println("Booting");
 
@@ -121,24 +76,17 @@ void setup() {
   ESP32Encoder::useInternalWeakPullResistors=UP;
   encoder.attachFullQuad(ROTARY_PIN_A, ROTARY_PIN_B);
 
-  WiFi.mode(WIFI_STA);
-
-  wifiScan();
-  
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.println(WiFi.status());
-    Serial.println("Connection Failed! Retrying...");
-
-    for (int i=0; i < 50; i++) {
-      display.showWait(i/2);
-
-      delay(10);
-    }
+  wifiManager.setConfigPortalBlocking(false);
+  if (wifiManager.autoConnect(ssid)) {
+    Serial.println("Ready");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("Configportal running");
   }
-  
+
   // Choose one to begin listening for E1.31 data
-  //if (e131.begin(E131_UNICAST))                               // Listen via Unicast
+  // if (e131.begin(E131_UNICAST))                               // Listen via Unicast
   if (e131.begin(E131_MULTICAST, UNIVERSE, UNIVERSE_COUNT))   // Listen via Multicast
       Serial.println(F("Listening for data..."));
   else 
@@ -146,37 +94,33 @@ void setup() {
 
   // ESP.restart();
 
-  ArduinoOTA
-    .onStart([]() {
-      String type;
-      if (ArduinoOTA.getCommand() == U_FLASH)
-        type = "sketch";
-      else // U_SPIFFS
-        type = "filesystem";
+  // ArduinoOTA
+  //   .onStart([]() {
+  //     String type;
+  //     if (ArduinoOTA.getCommand() == U_FLASH)
+  //       type = "sketch";
+  //     else // U_SPIFFS
+  //       type = "filesystem";
 
-      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-      Serial.println("Start updating " + type);
-    })
-    .onEnd([]() {
-      Serial.println("\nEnd");
-    })
-    .onProgress([](unsigned int progress, unsigned int total) {
-      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    })
-    .onError([](ota_error_t error) {
-      Serial.printf("Error[%u]: ", error);
-      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-      else if (error == OTA_END_ERROR) Serial.println("End Failed");
-    });
+  //     // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+  //     Serial.println("Start updating " + type);
+  //   })
+  //   .onEnd([]() {
+  //     Serial.println("\nEnd");
+  //   })
+  //   .onProgress([](unsigned int progress, unsigned int total) {
+  //     Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  //   })
+  //   .onError([](ota_error_t error) {
+  //     Serial.printf("Error[%u]: ", error);
+  //     if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+  //     else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+  //     else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+  //     else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+  //     else if (error == OTA_END_ERROR) Serial.println("End Failed");
+  //   });
 
-  ArduinoOTA.begin();
-
-  Serial.println("Ready");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  // ArduinoOTA.begin();
 
   FastLED.setMaxPowerInVoltsAndMilliamps( VOLTS, MAX_MA);
   FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(matrix.leds, matrix.nrleds())
@@ -186,9 +130,24 @@ void setup() {
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_4, 1);
 }
 
+int programId = 0;
+void readProgram() {
+  int selectedProgram = mod8(encoder.getCount() / 2, PROGRAM_COUNT);
+
+  if (selectedProgram != programId) {
+    programId = selectedProgram;
+    programs[programId]->setup();
+    Serial.printf("Selected program: %d\n", programId);
+  }
+  display.showNumber(selectedProgram);
+
+}
+
 EventTimer t_brightness(50);
 
 void loop() {
+  wifiManager.process();
+
   // Control the brightness of the grid.
   if (t_brightness.ready())
     updateBrightness();
@@ -201,27 +160,28 @@ void loop() {
     esp_deep_sleep_start();
   }
 
-//  int encoderButton = digitalRead(ROTARY_PIN_BUTTON);
-//  digitalWrite(POT_LED_PIN, encoderButton);
-  int programId = (encoder.getCount() / 2) % PROGRAM_COUNT;
-  // int programId = 0;
+  int encoderButton = digitalRead(ROTARY_PIN_BUTTON);
+  digitalWrite(POT_LED_PIN, encoderButton);
+
+  readProgram();
+  programs[programId]->tick(matrix);
+  FastLED.show();
 
   if (!e131.isEmpty()) {
       e131_packet_t packet;
       e131.pull(&packet);     // Pull packet from ring buffer
-      
+
       Serial.printf("Universe %u / %u Channels | Packet#: %u / Errors: %u / CH1: %u\n",
               htons(packet.universe),                 // The Universe for this packet
               htons(packet.property_value_count) - 1, // Start code is ignored, we're interested in dimmer data
               e131.stats.num_packets,                 // Packet counter
               e131.stats.packet_errors,               // Packet error counter
-              packet.property_values[1]);             // Dimmer data for Channel 1
+              packet.property_values[0]);             // Dimmer data for Channel 1
+
+
+      programId = packet.property_values[0];
+      encoder.setCount(programId * 2);
   }
 
-  display.showNumber(programId);
-
-  programs[programId]->tick(matrix);
-
-  FastLED.show();
-  ArduinoOTA.handle();
+  // ArduinoOTA.handle();
 }
