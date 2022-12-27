@@ -1,7 +1,6 @@
 #include <ESP32Encoder.h>
 #include "display.h"
 
-#include <WiFiManager.h>  
 #include <ArduinoOTA.h>
 
 #include <ESPAsyncE131.h>
@@ -9,10 +8,10 @@
 #include "SPI.h"
 #define FASTLED_ALL_PINS_HARDWARE_SPI
 #include "allprograms.h"
+#include "wifi.h"
 
-const char* ssid = "DiskoController";
+#define LED_TYPE   WS2813
 
-#define LED_TYPE   WS2812
 #define COLOR_ORDER   GRB
 #define DATA_PIN       GPIO_NUM_23
 #define VOLTS          5
@@ -31,9 +30,6 @@ const char* ssid = "DiskoController";
 
 #define UNIVERSE 10
 #define UNIVERSE_COUNT 10                // Total number of Universes to listen for, starting at UNIVERSE
-
-WiFiManager wifiManager;
-DNSServer dns;
 
 Display display = Display(SEGMENT_PINS);
 ESP32Encoder encoder;
@@ -60,37 +56,38 @@ void updateBrightness() {
   FastLED.setBrightness(pot_value);
 }
 
-void setup() {
+void setupOld() {
+  delay(500);
   Serial.begin(115200);
   Serial.println("Booting");
 
   display.setup();
 
-  pinMode(POWER_BUTTON_PIN, INPUT_PULLDOWN);
+  // pinMode(POWER_BUTTON_PIN, INPUT_PULLDOWN);
 
-  pinMode(POT_INPUT_PIN, INPUT);
-  pinMode(POT_LED_PIN, OUTPUT);
+  // pinMode(POT_INPUT_PIN, INPUT);
+  // pinMode(POT_LED_PIN, OUTPUT);
 
-  pinMode(ROTARY_PIN_BUTTON, INPUT_PULLDOWN);
+  // pinMode(ROTARY_PIN_BUTTON, INPUT_PULLDOWN);
 
-  ESP32Encoder::useInternalWeakPullResistors=UP;
-  encoder.attachFullQuad(ROTARY_PIN_A, ROTARY_PIN_B);
+  // ESP32Encoder::useInternalWeakPullResistors=UP;
+  // encoder.attachFullQuad(ROTARY_PIN_A, ROTARY_PIN_B);
 
-  wifiManager.setConfigPortalBlocking(false);
-  if (wifiManager.autoConnect(ssid)) {
-    Serial.println("Ready");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-  } else {
-    Serial.println("Configportal running");
-  }
+  // wifiManager.setConfigPortalBlocking(false);
+  // if (wifiManager.autoConnect(ssid)) {
+  //   Serial.println("Ready");
+  //   Serial.print("IP address: ");
+  //   Serial.println(WiFi.localIP());
+  // } else {
+  //   Serial.println("Configportal running");
+  // }
 
-  // Choose one to begin listening for E1.31 data
-  // if (e131.begin(E131_UNICAST))                               // Listen via Unicast
-  if (e131.begin(E131_MULTICAST, UNIVERSE, UNIVERSE_COUNT))   // Listen via Multicast
-      Serial.println(F("Listening for data..."));
-  else 
-      Serial.println(F("*** e131.begin failed ***"));
+  // // Choose one to begin listening for E1.31 data
+  // // if (e131.begin(E131_UNICAST))                               // Listen via Unicast
+  // if (e131.begin(E131_MULTICAST, UNIVERSE, UNIVERSE_COUNT))   // Listen via Multicast
+  //     Serial.println(F("Listening for data..."));
+  // else 
+  //     Serial.println(F("*** e131.begin failed ***"));
 
   // ESP.restart();
 
@@ -122,13 +119,40 @@ void setup() {
 
   // ArduinoOTA.begin();
 
+  // FastLED.setMaxPowerInVoltsAndMilliamps( VOLTS, MAX_MA);
+  // FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(matrix.leds, matrix.nrleds())
+  //   .setCorrection(TypicalLEDStrip);
+  // updateBrightness();
+
+  // esp_sleep_enable_ext0_wakeup(GPIO_NUM_4, 1);
+}
+
+void ledsSetup() {
   FastLED.setMaxPowerInVoltsAndMilliamps( VOLTS, MAX_MA);
   FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(matrix.leds, matrix.nrleds())
     .setCorrection(TypicalLEDStrip);
   updateBrightness();
 
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_4, 1);
 }
+
+void setup() {
+  delay( 300 ); //safety startup delay
+
+  Serial.begin(115200);
+  while (!Serial);
+
+  delay(200);
+
+	Serial.println("Setting up wifi");
+	wifiSetup();
+	
+	// Serial.println("Setting up server");
+	// serverSetup();
+
+	Serial.println("Setting up leds");
+	ledsSetup();
+}
+
 
 int programId = 0;
 void readProgram() {
@@ -143,45 +167,58 @@ void readProgram() {
 
 }
 
-EventTimer t_brightness(50);
+// EventTimer t_brightness(50);
 
-void loop() {
-  wifiManager.process();
+void loopOld() {
+  // wifiManager.process();
 
   // Control the brightness of the grid.
-  if (t_brightness.ready())
-    updateBrightness();
+  // if (t_brightness.ready())
+  //   updateBrightness();
 
   // The powerbutton triggers the deep sleep, being woken up by interrupts
-  int powerbutton = digitalRead(POWER_BUTTON_PIN);
-  if (!powerbutton) {
-    FastLED.clear(true);
+  // int powerbutton = digitalRead(POWER_BUTTON_PIN);
+  // if (!powerbutton) {
+  //   FastLED.clear(true);
 
-    esp_deep_sleep_start();
-  }
+  //   esp_deep_sleep_start();
+  // }
 
-  int encoderButton = digitalRead(ROTARY_PIN_BUTTON);
-  digitalWrite(POT_LED_PIN, encoderButton);
+  // int encoderButton = digitalRead(ROTARY_PIN_BUTTON);
+  // digitalWrite(POT_LED_PIN, encoderButton);
 
-  readProgram();
+  // readProgram();
   programs[programId]->tick(matrix);
   FastLED.show();
 
-  if (!e131.isEmpty()) {
-      e131_packet_t packet;
-      e131.pull(&packet);     // Pull packet from ring buffer
+  // if (!e131.isEmpty()) {
+  //     e131_packet_t packet;
+  //     e131.pull(&packet);     // Pull packet from ring buffer
 
-      Serial.printf("Universe %u / %u Channels | Packet#: %u / Errors: %u / CH1: %u\n",
-              htons(packet.universe),                 // The Universe for this packet
-              htons(packet.property_value_count) - 1, // Start code is ignored, we're interested in dimmer data
-              e131.stats.num_packets,                 // Packet counter
-              e131.stats.packet_errors,               // Packet error counter
-              packet.property_values[0]);             // Dimmer data for Channel 1
+  //     Serial.printf("Universe %u / %u Channels | Packet#: %u / Errors: %u / CH1: %u\n",
+  //             htons(packet.universe),                 // The Universe for this packet
+  //             htons(packet.property_value_count) - 1, // Start code is ignored, we're interested in dimmer data
+  //             e131.stats.num_packets,                 // Packet counter
+  //             e131.stats.packet_errors,               // Packet error counter
+  //             packet.property_values[0]);             // Dimmer data for Channel 1
 
 
-      programId = packet.property_values[0];
-      encoder.setCount(programId * 2);
-  }
+  //     programId = packet.property_values[0];
+  //     encoder.setCount(programId * 2);
+  // }
 
   // ArduinoOTA.handle();
+}
+
+void ledsLoop() {
+  // readProgram();
+  programs[programId]->tick(matrix);
+  FastLED.show();
+}
+
+void loop(){
+	wifiLoop();
+	// serverLoop();
+
+	ledsLoop();
 }
