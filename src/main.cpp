@@ -3,21 +3,14 @@
 
 // #include <ESPAsyncE131.h>
 
-#include "allprograms.h"
+#include "programs.h"
 #include "wifi.h"
-
-#define LED_TYPE   WS2813
-
-#define COLOR_ORDER   GRB
-#define DATA_PIN       GPIO_NUM_12
-#define VOLTS          5
-#define MAX_MA       4000
+#include "server.h"
 
 // #define SEGMENT_PINS GPIO_NUM_32, GPIO_NUM_26, GPIO_NUM_13, GPIO_NUM_12, GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_25, GPIO_NUM_33, GPIO_NUM_2, GPIO_NUM_15
 
 // #define POT_INPUT_PIN GPIO_NUM_36
 // #define POT_LED_PIN GPIO_NUM_16
-#define LED_PIN GPIO_NUM_16
 
 // #define ROTARY_PIN_A GPIO_NUM_34
 // #define ROTARY_PIN_B GPIO_NUM_35
@@ -31,22 +24,10 @@
 // Display display = Display(SEGMENT_PINS);
 // ESP32Encoder encoder;
 
-Ledgrid matrix;
 
 // ESPAsyncE131 instance with UNIVERSE_COUNT buffer slots
 // ESPAsyncE131 e131(UNIVERSE_COUNT);
 
-Program *programs[] = {
-    new Christmas(),
-    new Spiral(),
-    new Spots(),
-    new DrawRainbows2(),
-    new DrawRainbows1(),
-    new PixelSweep(),
-    new ColorSweep(),
-    new ColorGradient(),
-};
-enum { PROGRAM_COUNT = sizeof(programs)/sizeof(programs[0]) };
 
 // void updateBrightness() {
 //   int pot_value = ((float) analogRead(POT_INPUT_PIN)) / 16.062745098039215;
@@ -124,38 +105,25 @@ enum { PROGRAM_COUNT = sizeof(programs)/sizeof(programs[0]) };
 //   // esp_sleep_enable_ext0_wakeup(GPIO_NUM_4, 1);
 // }
 
-void ledsSetup() {
-
-  pinMode(LED_PIN, OUTPUT);
-  pinMode(DATA_PIN, OUTPUT);
-
-  FastLED.setMaxPowerInVoltsAndMilliamps( VOLTS, MAX_MA);
-  FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(matrix.leds, matrix.nrleds())
-    .setCorrection(TypicalLEDStrip);
-  // updateBrightness();
-
-}
-
 void setup() {
   delay( 300 ); //safety startup delay
 
   Serial.begin(115200);
   while (!Serial);
 
-  // delay(200);
+  delay(200);
 
 	Serial.println("Setting up wifi");
 	wifiSetup();
 	
 	// Serial.println("Setting up server");
-	// serverSetup();
+	serverSetup();
 
 	Serial.println("Setting up leds");
-	ledsSetup();
+	programSetup();
 }
 
 
-int programId = 1;
 // void readProgram() {
 //   int selectedProgram = mod8(encoder.getCount() / 2, PROGRAM_COUNT);
 
@@ -211,29 +179,9 @@ int programId = 1;
 //   // ArduinoOTA.handle();
 // }
 
-void ledsLoop() {
-  // readProgram();
-  programs[programId]->tick(matrix);
-  // matrix.fill(CRGB::Red);
-  FastLED.show();
-
-  // Serial.println("High");
-  // digitalWrite(DATA_PIN, 1);
-  // delay(3000);
-  // Serial.println("Low");
-  // digitalWrite(DATA_PIN, 0);
-  // delay(3000);
-
-  EVERY_N_SECONDS(30) {
-    programId = (programId+1) % PROGRAM_COUNT;
-  }
-
-  Serial.println("Loop done");
-}
-
 void loop(){
 	wifiLoop();
-	// serverLoop();
+	serverLoop();
 
-	ledsLoop();
+	programLoop();
 }

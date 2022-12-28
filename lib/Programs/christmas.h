@@ -4,32 +4,31 @@
 #include "FastLED.h"
 
 class Christmas : public Program {
-    CHSV color1;
-    fract8 color1blend = 0;
+    CHSVPalette32 palette;
+    uint8_t color1Hue = 0;
     bool color1direction = true;
-    CHSV color2;
-    fract8 color2blend = 0;
-    bool color2direction = true;
 public:
     void setup() {
       tickGradientColors();
     }
     void tickGradientColors() {
-      color1 = blend(CHSV(0, 255, 255), CHSV(180, 255, 255), color1blend);
-      color2 = blend(CHSV(120, 255, 255), CHSV(180, 255, 255), color2blend);
+      color1direction ? color1Hue++ : color1Hue--;
+      color1direction ^= color1Hue == 0 || color1Hue == 250;
 
-      color1direction ? color1blend++ : color1blend--;
-      color1direction ^= color1blend == 0 || color1blend == 250;
-      color2direction ? color2blend++ : color2blend--;
-      color2direction ^= color2blend == 0 || color2blend == 150;
+      palette = CHSVPalette32(CHSV(color1Hue, 255, 255), CHSV(color1Hue+120, 255, 255));
     }
     void tick(Ledgrid&matrix) {
-      
-      matrix.fill_gradient_horizontal(
-        0, 0, color1,
-        matrix.width()-1, matrix.height()-1, color2,
-        FORWARD_HUES
-      );
+      float ms = ((float) millis()) / 1000;
+      for (int i=0; i<matrix.height(); i++) {
+        uint8_t wave = (sin(((float) i/10) + ms)+1) * 10;
+
+        matrix.fill_gradient_horizontal(
+          0, i, ColorFromPalette(palette, wave),
+          matrix.width()-1, i, ColorFromPalette(palette, 255-wave),
+          FORWARD_HUES
+        );
+
+      }
 
       EVERY_N_MILLIS(50) {
         tickGradientColors();

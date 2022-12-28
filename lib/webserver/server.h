@@ -12,17 +12,18 @@
 #include <ESPAsyncWebServer.h>
 #include "AsyncJson.h"
 #include "ArduinoJson.h"
+#include "programs.h"
 
 
 // SKETCH BEGIN
 AsyncWebServer server(80);
 AsyncEventSource events("/events");
-const char *hostName = "esp-lights";
+const char *hostName = "disko-grid";
 
 AsyncCallbackJsonWebHandler* handler = new AsyncCallbackJsonWebHandler("/color", [](AsyncWebServerRequest *request, JsonVariant &json) {
   JsonObject jsonObj = json.as<JsonObject>();
 
-  scene->setConfig(jsonObj);
+  // scene->setConfig(jsonObj);
   request->send(200, "application/json", "{test: \"ok\"}");
 });
 
@@ -58,10 +59,41 @@ void serverSetup(){
   events.onConnect([](AsyncEventSourceClient *client){
     client->send("hello!",NULL,millis(),1000);
   });
-DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Accept, Content-Type");
+  
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Accept, Content-Type");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+
   server.addHandler(&events);
   server.addHandler(handler);
+
+  // Send a POST request to <IP>/program to set the program
+  server.on("/program", HTTP_POST, [](AsyncWebServerRequest *request){
+    char str[50];
+
+    if (request->hasParam("program", true)) {
+        std::string program = request->getParam("program", true)->value().c_str();
+        if (programs.find(program) != programs.end()) {
+          currentProgram = program;
+          char str[50];
+          sprintf(str, "Done %s", currentProgram.c_str());
+          return request->send(200, "text/plain", str);
+        }
+      sprintf(str, "Invalid program: %s", currentProgram);
+      return request->send(400, "text/plain", str);
+    }
+    request->send(400, "text/plain", "No program selected");
+  });
+  server.on("/program", HTTP_GET, [](AsyncWebServerRequest *request){
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    DynamicJsonDocument json(1024);
+
+    for(auto &[name, program]: programs) {
+      json.add(name);
+    }
+    serializeJson(json, *response);
+    response->setCode(200);
+    request->send(response);
+  });
 
   server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
