@@ -1,56 +1,60 @@
 import math
 class DiscoLeds:
     # 6 x 4 tiles
-    GRIDWIDTH = 6
-    GRIDHEIGHT = 4
+    PANEL_WIDTH = 6
+    PANEL_HEIGHT = 4
 
     # size of each tile
-    TILEWIDTH = TILEHEIGHT = 4
+    TILE_WIDTH = TILE_HEIGHT = 4
 
     # spacing between the tiles.
-    Hspace = 1
-    Vspace = 1
+    Hspace = 3
+    Vspace = 3
 
     def xy(self, x, y):
         """ Convert x,y led coordinate to the lednr on the led-string """
 
         x = round(x)
         y = round(y)
+        if x<0 or x>=self.PANEL_WIDTH*(self.TILE_WIDTH+self.Hspace):
+            return -1
+        if y<0 or y>=self.PANEL_HEIGHT*(self.TILE_HEIGHT+self.Vspace):
+            return -1
 
         # calculate tile coordinate
-        tx = x // (self.TILEWIDTH+self.Hspace)    # 0..self.GRIDWIDTH-1
-        ty = y // (self.TILEHEIGHT+self.Vspace)   # 0..self.GRIDHEIGHT-1
+        tx = x // (self.TILE_WIDTH+self.Hspace)    # 0..self.PANEL_WIDTH-1
+        ty = y // (self.TILE_HEIGHT+self.Vspace)   # 0..self.PANEL_HEIGHT-1
         if ty%2 == 0:
             # flip even rows
-            tx = self.GRIDWIDTH-1-tx
+            tx = self.PANEL_WIDTH-1-tx
 
         # calculate subcoordinate of led within the tile.
-        _x = x % (self.TILEWIDTH+self.Hspace)     # 0..self.TILEWIDTH+self.Hspace-1
-        _y = y % (self.TILEHEIGHT+self.Vspace)    # 0..self.TILEHEIGHT+self.Vspace-1
-        if _y>=self.TILEHEIGHT: return -1    # spacing
-        if _x>=self.TILEWIDTH: return -1     # spacing
+        _x = x % (self.TILE_WIDTH+self.Hspace)     # 0..self.TILE_WIDTH+self.Hspace-1
+        _y = y % (self.TILE_HEIGHT+self.Vspace)    # 0..self.TILE_HEIGHT+self.Vspace-1
+        if _y>=self.TILE_HEIGHT: return -1    # spacing
+        if _x>=self.TILE_WIDTH: return -1     # spacing
         if _y%2:
             # flip odd rows
-            _x = self.TILEWIDTH-1-_x
+            _x = self.TILE_WIDTH-1-_x
 
         # calculate tile nr
-        tilenr = self.GRIDWIDTH*ty+tx
+        tilenr = self.PANEL_WIDTH*ty+tx
         # calculate lednr within the tile
-        lednr = self.TILEWIDTH*_y+_x
+        lednr = self.TILE_WIDTH*_y+_x
 
         # combine
-        return tilenr*self.TILEWIDTH*self.TILEHEIGHT + lednr
+        return tilenr*self.TILE_WIDTH*self.TILE_HEIGHT + lednr
 
     def printlayout(self):
         # output all lednrs.
-        for y in range(self.GRIDHEIGHT*(self.TILEHEIGHT+self.Vspace)):
-            for x in range(self.GRIDWIDTH*(self.TILEWIDTH+self.Hspace)):
+        for y in range(self.PANEL_HEIGHT*(self.TILE_HEIGHT+self.Vspace)):
+            for x in range(self.PANEL_WIDTH*(self.TILE_WIDTH+self.Hspace)):
                 print("%4d" % self.xy(x,y), end='')
             print()
 
 
     def fill(self, color=" "):
-        self.leds = [color] * (self.GRIDWIDTH*self.GRIDHEIGHT * self.TILEWIDTH*self.TILEHEIGHT)
+        self.leds = [color] * (self.PANEL_WIDTH*self.PANEL_HEIGHT * self.TILE_WIDTH*self.TILE_HEIGHT)
 
     def plot(self, x, y, color):
         i = self.xy(x,y)
@@ -58,10 +62,10 @@ class DiscoLeds:
             self.leds[i] = color
 
     def printleds(self):
-        print("."*(self.GRIDWIDTH*(self.TILEWIDTH+self.Hspace)+1))
-        for y in range(self.GRIDHEIGHT*(self.TILEHEIGHT+self.Vspace)):
+        print("."*(self.PANEL_WIDTH*(self.TILE_WIDTH+self.Hspace)+1))
+        for y in range(self.PANEL_HEIGHT*(self.TILE_HEIGHT+self.Vspace)):
             print(".", end="")
-            for x in range(self.GRIDWIDTH*(self.TILEWIDTH+self.Hspace)):
+            for x in range(self.PANEL_WIDTH*(self.TILE_WIDTH+self.Hspace)):
                 i = self.xy(x,y)
                 if i==-1:
                     print(".", end="")
@@ -97,18 +101,39 @@ class DiscoLeds:
 
 def main():
     leds = DiscoLeds()
-    #leds.printlayout()
+    print("-- layout")
+    leds.printlayout()
 
     print()
     leds.fill(" ")
 
 
+    print("-- lines")
     leds.line(0,0,30, 15, "*")
     leds.line(10,0,30, 15, "*")
     leds.line(10,0,25, 40, "*")
-
-    leds.circle(10, 10, 5, "+")
     leds.printleds()
+    print()
+
+    leds.fill(" ")
+    leds.circle(10, 10, 5, "+")
+    print("-- circle")
+    leds.printleds()
+    print()
+
+    for x in range(-10, 50):
+        leds.fill(" ")
+        leds.line(x,-10,x,40, "*")
+        print("-- line at x=%d" % x)
+        leds.printleds()
+        print()
+
+    for y in range(-5, 30):
+        leds.fill(" ")
+        leds.line(-10,y,40,y, "*")
+        print("-- line at y=%d" % y)
+        leds.printleds()
+        print()
 
     
 if __name__=='__main__':
