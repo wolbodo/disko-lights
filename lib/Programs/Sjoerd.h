@@ -9,7 +9,7 @@ public:
     {
         matrix.fill(CHSV(millis() / 100, 150, 100));
         matrix.drawCircle(
-            matrix.width(), matrix.height(), sin8(millis() / 100) / 10,
+            matrix.width()/2, matrix.height()/2, (sin8(millis() / 10) / 10) + 1,
             CHSV(millis()/250, 255, 255)
         );
     }
