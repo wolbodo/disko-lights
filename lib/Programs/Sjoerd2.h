@@ -3,13 +3,13 @@
 #include "program.h"
 #include "ledgrid.h"
 
-class Sjoerd  : public Program { 
+class Sjoerd2 : public Program { 
 public:
     void tick(Ledgrid&matrix)
     {
         matrix.fill(CHSV(millis() / 100, 150, 100));
         matrix.drawCircle(
-            matrix.width(), matrix.height(), (millis()/10) % matrix.height,
+            matrix.width(), matrix.height(), (millis()/10) % matrix.height(),
             CHSV(millis()/250, 255, 255)
         );
     }
