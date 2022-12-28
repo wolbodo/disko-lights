@@ -11,6 +11,7 @@
 #include "spots.h"
 #include "christmas.h"
 #include "Sjoerd.h"
+#include "Sjoerd2.h"
 
 #define LED_TYPE   WS2813
 
@@ -30,6 +31,7 @@ const std::map<std::string, Program*> programs = {
   {"ColorSweep",  new ColorSweep()},
   {"ColorGradient",  new ColorGradient()},
   {"Sjoerd", new Sjoerd()},
+  {"Sjoerd2", new Sjoerd2()},
 };
 std::string currentProgram = "Christmas";
 
