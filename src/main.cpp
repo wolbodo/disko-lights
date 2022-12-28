@@ -4,7 +4,7 @@
 // #include <ESPAsyncE131.h>
 
 #include "programs.h"
-#include "wifi.h"
+#include "wifisetup.h"
 #include "server.h"
 
 // #define SEGMENT_PINS GPIO_NUM_32, GPIO_NUM_26, GPIO_NUM_13, GPIO_NUM_12, GPIO_NUM_14, GPIO_NUM_27, GPIO_NUM_25, GPIO_NUM_33, GPIO_NUM_2, GPIO_NUM_15
