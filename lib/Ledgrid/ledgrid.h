@@ -2,6 +2,18 @@
 
 #include <graphlib.h>
 
+/*
+adds these methods to GraphicsPrimitives :
+
+  fill
+  fill_gradient_horizontal
+  paintTile
+  tilePixel
+
+note: program 'rainbow1' directly access the 'leds' array.
+
+ */
+
 struct Ledgrid : public GraphicsPrimitives {
     enum {
         // 6 x 4 tiles
@@ -58,6 +70,7 @@ struct Ledgrid : public GraphicsPrimitives {
         return tilenr*TILE_WIDTH*TILE_HEIGHT + lednr;
     }
 
+    // This method needs to be implemented for GraphicsPrimitives 
     void drawPixel(int16_t x, int16_t y, CRGB color) override
     {
         int i = xy2i(x, y);

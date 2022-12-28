@@ -6,6 +6,35 @@
 .pio/libdeps/esp32dev/SmartMatrix/src/Layer_BackgroundGfx_Impl.h
 
 .pio/libdeps/esp32dev/Adafruit GFX Library/Adafruit_GFX.cpp
+
+public interface:
+    virtual void drawPixel(int16_t x, int16_t y, CRGB color) = 0;
+    virtual int16_t width() = 0;
+    virtual int16_t height() = 0;
+
+    void writeLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, CRGB color)
+    void startWrite()
+    void writePixel(int16_t x, int16_t y, CRGB color)
+    void writeFastVLine(int16_t x, int16_t y, int16_t h, CRGB color)
+    void writeFastHLine(int16_t x, int16_t y, int16_t w, CRGB color)
+    void writeFillRect(int16_t x, int16_t y, int16_t w, int16_t h, CRGB color)
+    void endWrite()
+    void drawFastVLine(int16_t x, int16_t y, int16_t h, CRGB color)
+    void drawFastHLine(int16_t x, int16_t y, int16_t w, CRGB color)
+    void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, CRGB color)
+    void fillScreen(CRGB color)
+    void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, CRGB color)
+    void drawCircle(int16_t x0, int16_t y0, int16_t r, CRGB color)
+    void drawCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cornername, CRGB color)
+    void fillCircle(int16_t x0, int16_t y0, int16_t r, CRGB color)
+    void fillCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t corners, int16_t delta, CRGB color)
+    void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, CRGB color)
+    void drawRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r, CRGB color)
+    void fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r, CRGB color)
+    void drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, CRGB color)
+    void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, CRGB color)
+
+
 */
 
 class GraphicsPrimitives {
