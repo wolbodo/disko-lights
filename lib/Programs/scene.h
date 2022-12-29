@@ -63,10 +63,12 @@ public:
 
     void tick(Ledgrid& matrix, Params& p) override
     {
-        pos += dir;
+        EVERY_N_MILLISECONDS(10) {
+            pos += dir;
 
-        dir.x = random8(2)-1;
-        dir.y = random8(2)-1;
+            dir.x = random8(3)-1;
+            dir.y = random8(3)-1;
+        }
 
         matrix.drawPixel(pos.x, pos.y, CRGB::Blue);
     }
@@ -89,15 +91,13 @@ public:
 
     void tick(Ledgrid& matrix, Params& p) override
     {
-        step++;
-        if (step%3)
-            return;
-
-        Vector dot(p.get("dot", "x"), p.get("dot", "y"));
-        if (dot.x > x)
-            x++;
-        else if (dot.x < x)
-            x--;
+        EVERY_N_MILLISECONDS(100) {
+                Vector dot(p.get("dot", "x"), p.get("dot", "y"));
+                if (dot.x > x)
+                    x++;
+                else if (dot.x < x)
+                    x--;
+        }
 
         matrix.drawLine(x, 0, x, matrix.height(), CHSV(millis()/200, 255, 255));
     }
@@ -115,6 +115,9 @@ public:
         _dot.getParams(p.getdictfor("dot"));
         _line.getParams(p.getdictfor("line"));
 
+        EVERY_N_MILLISECONDS(500) {
+            matrix.fillScreen(CRGB::Black);
+        }
         _dot.tick(matrix, p);
         _line.tick(matrix, p);
     }
