@@ -12,6 +12,7 @@
 #include "christmas.h"
 #include "Sjoerd.h"
 #include "Sjoerd2.h"
+#include "scene.h"
 
 #include "webserver.h"
 
@@ -41,6 +42,7 @@ public:
       programs["ColorGradient"] = new ColorGradient();
       programs["Sjoerd"] = new Sjoerd();
       programs["Sjoerd2"] = new Sjoerd2();
+      programs["scene"] = new Scene();
     }
 
     bool setCurrentProgram(const std::string& name) override
