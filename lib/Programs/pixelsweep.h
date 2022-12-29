@@ -4,6 +4,11 @@
 #include "FastLED.h"
 #include "eventtimer.h"
 
+/*
+   PixelSweep alternates between a panel-sweep, and a pixel-sweep.
+   Where a Panel-Sweep, cycles through all panels, and
+   a Pixel-Sweep, cycles through all 16 led positions for all panels simultaneously.
+ */
 class PixelSweep : public Program {
     enum { PANEL_SWEEP, PIXEL_SWEEP };
     int sweepstate = PANEL_SWEEP;
