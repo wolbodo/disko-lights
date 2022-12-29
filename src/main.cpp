@@ -43,6 +43,7 @@ public:
       programs["Sjoerd"] = new Sjoerd();
       programs["Sjoerd2"] = new Sjoerd2();
       programs["scene"] = new Scene();
+      programs["Spiral"] = new Spiral();
     }
 
     bool setCurrentProgram(const std::string& name) override
