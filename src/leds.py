@@ -1,4 +1,6 @@
 import math
+import time
+
 class DiscoLeds:
     # 6 x 4 tiles
     PANEL_WIDTH = 6
@@ -97,13 +99,7 @@ class DiscoLeds:
         for a in range(30):
             self.plot(x0+r*math.cos(a/30*2*math.pi), y0+r*math.sin(a/30*2*math.pi), color)
 
-
-
-def main():
-    leds = DiscoLeds()
-    print("-- layout")
-    leds.printlayout()
-
+def xx():
     print()
     leds.fill(" ")
 
@@ -115,25 +111,46 @@ def main():
     leds.printleds()
     print()
 
-    leds.fill(" ")
-    leds.circle(10, 10, 5, "+")
-    print("-- circle")
-    leds.printleds()
-    print()
 
-    for x in range(-10, 50):
-        leds.fill(" ")
-        leds.line(x,-10,x,40, "*")
-        print("-- line at x=%d" % x)
-        leds.printleds()
-        print()
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description='disko-grid pixels')
+    parser.add_argument('--printlayout', '-l', action='store_true', help='print the led numbers in the grid.')
+    args = parser.parse_args()
 
-    for y in range(-5, 30):
-        leds.fill(" ")
-        leds.line(-10,y,40,y, "*")
-        print("-- line at y=%d" % y)
-        leds.printleds()
-        print()
+    leds = DiscoLeds()
+
+    if args.printlayout:
+        print("-- layout")
+        leds.printlayout()
+
+    else:
+        for x in range(5, 40):
+            leds.fill(" ")
+            leds.circle(x, 8 + x//8, 5, "+")
+            print("\x1b[H\x1b[2J", end="")
+            print("-- circle at (%d,%d)" % (x, 8 + x//8))
+            leds.printleds()
+            print()
+            time.sleep(0.1)
+
+        for x in range(-10, 50):
+            leds.fill(" ")
+            leds.line(x,-10,x,40, "*")
+            print("\x1b[H\x1b[2J", end="")
+            print("-- line at x=%d" % x)
+            leds.printleds()
+            print()
+            time.sleep(0.1)
+
+        for y in range(-5, 30):
+            leds.fill(" ")
+            leds.line(-10,y,40,y, "*")
+            print("\x1b[H\x1b[2J", end="")
+            print("-- line at y=%d" % y)
+            leds.printleds()
+            print()
+            time.sleep(0.1)
 
     
 if __name__=='__main__':
