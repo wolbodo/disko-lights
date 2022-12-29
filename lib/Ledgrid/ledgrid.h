@@ -38,10 +38,9 @@ struct Ledgrid : public GraphicsPrimitives {
      // Convert x,y led coordinate to the lednr on the led-string
     int xy2i(int x, int y)
     {
-        if (x<0 || x>=PANEL_WIDTH*(TILE_WIDTH+Hspace))
-            return -1;
-        if (y<0 || y>=PANEL_HEIGHT*(TILE_HEIGHT+Vspace))
-            return -1;
+        x = mod8(x, PANEL_WIDTH*(TILE_WIDTH+Hspace));
+        y = mod8(y, PANEL_HEIGHT*(TILE_HEIGHT+Vspace));
+
         // calculate tile coordinate
         int tx = x / (TILE_WIDTH+Hspace);   // 0..PANEL_WIDTH-1
         int ty = y / (TILE_HEIGHT+Vspace);  // 0..PANEL_HEIGHT-1
