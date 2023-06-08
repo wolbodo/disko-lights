@@ -96,12 +96,12 @@ void ledsSetup() {
 
 
 void setup() {
-  delay( 300 ); //safety startup delay
+    delay( 300 ); //safety startup delay
 
-  Serial.begin(115200);
-  while (!Serial);
+    Serial.begin(115200);
+    while (!Serial);
 
-  delay(200);
+    delay(200);
 
 	Serial.println("Setting up wifi");
 	wifiSetup();
