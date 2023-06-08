@@ -83,16 +83,21 @@ public:
       server.addHandler(handler);
 
       // Send a POST request to <IP>/program to set the program
-      server.on("/program", HTTP_POST, [this](AsyncWebServerRequest *request){
+      server.on("/config", HTTP_POST, [this](AsyncWebServerRequest *request){
         if (request->hasParam("program", true)) {
-            std::string program = request->getParam("program", true)->value().c_str();
-            if (main->setCurrentProgram(program)) {
-              return request->send(200, "text/plain");
-            }
-          return request->send(400, "text/plain", "Invalid program");
+          std::string program = request->getParam("program", true)->value().c_str();
+          
+          if (!main->setCurrentProgram(program)) {
+            return request->send(400, "text/plain", "Invalid program");
+          }
         }
-        request->send(400, "text/plain", "No program selected");
+        if (request->hasParam("brightness", true)) {
+          uint8_t brightness = atoi(request->getParam("brightness", true)->value().c_str());
+          FastLED.setBrightness(brightness);
+        }
+        request->send(200, "text/plain", "Ok");
       });
+
       server.on("/program", HTTP_GET, [this](AsyncWebServerRequest *request){
         AsyncResponseStream *response = request->beginResponseStream("application/json");
         DynamicJsonDocument json(1024);
